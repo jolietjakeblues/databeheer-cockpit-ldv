@@ -14,6 +14,7 @@ from app.checks.data_quality import gather_data_quality_statuses
 from app.checks.pipelines import gather_pipeline_statuses
 from app.checks.services import gather_service_statuses
 from app.config import load_sources
+from app.summary import sorted_entries, summarize
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -38,8 +39,17 @@ cache = DashboardCache(
 @app.get("/")
 def dashboard(request: Request):
     sections = cache.all_sections()
+    counts = summarize(sections)
+    total = sum(counts.values()) or 1
     template = jinja_env.get_template("dashboard.html")
-    return HTMLResponse(template.render(sections=sections))
+    return HTMLResponse(
+        template.render(
+            sections=sections,
+            sorted_entries=sorted_entries,
+            counts=counts,
+            total=total,
+        )
+    )
 
 
 @app.post("/refresh")

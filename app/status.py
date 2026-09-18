@@ -10,6 +10,10 @@ class Level(str, Enum):
     UNKNOWN = "unknown"
 
 
+# Probleem-eerst: hoe lager, hoe hoger in de lijst.
+SEVERITY_ORDER = {Level.FAIL: 0, Level.WARNING: 1, Level.UNKNOWN: 2, Level.OK: 3}
+
+
 @dataclass
 class StatusEntry:
     label: str

@@ -5,12 +5,39 @@
         <span class="hint">Secties verversen ook automatisch elke {{ 300 }} seconden.</span>
     </form>
 
+    <section class="panel health-panel">
+        <div class="kpi-row">
+            <div class="kpi-tile kpi-ok">
+                <span class="kpi-value">{{ counts.ok }}</span>
+                <span class="kpi-label">OK</span>
+            </div>
+            <div class="kpi-tile kpi-warning">
+                <span class="kpi-value">{{ counts.warning }}</span>
+                <span class="kpi-label">Warning</span>
+            </div>
+            <div class="kpi-tile kpi-fail">
+                <span class="kpi-value">{{ counts.fail }}</span>
+                <span class="kpi-label">Fail</span>
+            </div>
+            <div class="kpi-tile kpi-unknown">
+                <span class="kpi-value">{{ counts.unknown }}</span>
+                <span class="kpi-label">Onbekend</span>
+            </div>
+        </div>
+        <div class="health-bar" role="img" aria-label="{{ counts.ok }} ok, {{ counts.warning }} warning, {{ counts.fail }} fail, {{ counts.unknown }} onbekend, van {{ total }} checks">
+            {% if counts.ok %}<span class="health-seg health-ok" style="width: {{ (counts.ok / total * 100) | round(1) }}%"></span>{% endif %}
+            {% if counts.warning %}<span class="health-seg health-warning" style="width: {{ (counts.warning / total * 100) | round(1) }}%"></span>{% endif %}
+            {% if counts.fail %}<span class="health-seg health-fail" style="width: {{ (counts.fail / total * 100) | round(1) }}%"></span>{% endif %}
+            {% if counts.unknown %}<span class="health-seg health-unknown" style="width: {{ (counts.unknown / total * 100) | round(1) }}%"></span>{% endif %}
+        </div>
+    </section>
+
     {% for key, section in sections.items() %}
     <section class="panel">
         <h2>{{ section.title }}</h2>
         {% if section.entries %}
         <ul class="status-list">
-            {% for entry in section.entries %}
+            {% for entry in sorted_entries(section) %}
             <li class="status-{{ entry.level.value }}">
                 <span class="dot"></span>
                 <span class="label">

@@ -19,11 +19,13 @@ def check_ldv_service(name: str, url: str) -> StatusEntry:
         info = json.loads(response.content)
         status = info.get("status")
         out_of_sync = info.get("outOfSync")
+        # De LDV-API geeft een echte JSON-boolean terug; alleen str/bool "true" tellen mee.
+        out_of_sync_bool = out_of_sync is True or str(out_of_sync).lower() == "true"
         created = datetime.strptime(info.get("createdAt"), timeformat_src)
 
         if status != "running":
             level = Level.FAIL
-        elif out_of_sync == "true":
+        elif out_of_sync_bool:
             level = Level.WARNING
         elif now_cet() - created <= timedelta(days=1):
             level = Level.WARNING

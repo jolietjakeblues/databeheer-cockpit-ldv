@@ -24,52 +24,70 @@ websites:
     url: https://www.cultureelerfgoed.nl/
 
 # GitHub Actions workflows die het LDV-databeheer draaiend houden.
+# cadence_days = verwachte cron-cadans, uitgelezen uit elke workflow (`on.schedule.cron`).
+# null = geen cron (workflow_dispatch-only), dan wordt alleen de laatste conclusie getoond,
+# geen "te lang geleden gedraaid"-check.
 pipelines:
   - repo: cultureelerfgoed/rce-thesauri-backup
     workflow: cht-backup-poolparty.yml
     label: "Thesauri Backup - CHT (PoolParty)"
+    cadence_days: 1
   - repo: cultureelerfgoed/rce-thesauri-backup
     workflow: abr-backup-poolparty.yml
     label: "Thesauri Backup - ABR (PoolParty)"
+    cadence_days: 1
   - repo: cultureelerfgoed/rce-thesauri-backup
     workflow: wo2-thesaurus-backup-poolparty.yml
     label: "Thesauri Backup - WO2"
+    cadence_days: 1
   - repo: cultureelerfgoed/rce-thesauri-backup
     workflow: rn-backup-poolparty.yml
     label: "Thesauri Backup - Referentie Netwerk"
+    cadence_days: 1
   - repo: cultureelerfgoed/rce-thesauri-backup
     workflow: rn2-backup-poolparty.yml
     label: "Thesauri Backup - Referentie Netwerk 2"
+    cadence_days: 1
   - repo: cultureelerfgoed/rce-thesauri-backup
     workflow: cht-kennisbank-poolparty.yml
     label: "Thesauri Backup - CHT concepts voor Kennisbank"
+    cadence_days: 1
   - repo: cultureelerfgoed/rce-thesauri-backup
     workflow: ldv-cho-count.yml
     label: "Dagelijkse triple-telling LDV CHO"
+    cadence_days: 1
   - repo: cultureelerfgoed/thesauri-poolparty-ldv
     workflow: deploy.yml
     label: "Deploy Thesauri PoolParty naar TriplyDB"
+    cadence_days: 1
   - repo: cultureelerfgoed/workflow-rijksmonumenten-sdo-termennetwerk
     workflow: schemaorg-pipeline.yml
     label: "Rijksmonumenten SDO pipeline"
+    cadence_days: 1
   - repo: cultureelerfgoed/tooi
     workflow: tooi-sync.yml
     label: "TOOI maandelijkse sync"
+    cadence_days: 31
   - repo: cultureelerfgoed/datacatalog-etl
     workflow: push_latest_datacatalog.yml
     label: "Datacatalog dagelijkse ETL"
+    cadence_days: 1
   - repo: cultureelerfgoed/muurschilderingendatabase-etl
     workflow: muurschilderingendatabase-etl.yml
     label: "Muurschilderingendatabase wekelijkse ETL"
+    cadence_days: 7
   - repo: cultureelerfgoed/kunstcollecties-etl
     workflow: stateful_harvest_kunstcollecties.yml
     label: "Kunstcollecties ETL"
+    cadence_days: null # alleen workflow_dispatch, geen cron
   - repo: cultureelerfgoed/cho-diff-monitor
     workflow: cho-diff-producer.yml
     label: "CHO diff - dagelijkse snapshot (producer)"
+    cadence_days: 1
   - repo: cultureelerfgoed/cho-diff-monitor
     workflow: cho-diff-monitor.yml
     label: "CHO diff - dagvergelijking (monitor)"
+    cadence_days: 1
 
 # SPARQL-endpoints voor datakwaliteitschecks (allen publiek, geen token nodig).
 sparql_endpoints:

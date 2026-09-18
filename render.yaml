@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: databeheer-cockpit-ldv
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: HISTORY_REMOTE_URL
+        value: https://raw.githubusercontent.com/jolietjakeblues/databeheer-cockpit-ldv/data/history.sqlite
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: POOLPARTY_TOKEN
+        sync: false

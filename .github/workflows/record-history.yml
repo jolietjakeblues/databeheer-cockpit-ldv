@@ -1,4 +1,4 @@
-name: Publiceer cockpit-snapshot naar Pages
+name: Werk trendhistorie bij
 
 on:
   schedule:
@@ -7,15 +7,13 @@ on:
 
 permissions:
   contents: write # om de data-branch (trendhistorie) bij te werken
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: history
   cancel-in-progress: false
 
 jobs:
-  build:
+  record:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -23,7 +21,7 @@ jobs:
         with:
           path: repo
 
-      - name: Checkout trendhistorie (data-branch, indien aanwezig)
+      - name: Checkout bestaande trendhistorie (data-branch, indien aanwezig)
         uses: actions/checkout@v4
         with:
           ref: data
@@ -49,11 +47,11 @@ jobs:
         working-directory: repo
         run: pip install -r requirements.txt
 
-      - name: Render statische snapshot
+      - name: Voer checks uit en sla snapshot op
         working-directory: repo
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python scripts/render_static.py
+        run: python scripts/record_history.py
 
       - name: Historie wegschrijven naar data-branch
         run: |
@@ -71,19 +69,3 @@ jobs:
           git push -q -f origin data
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Pages-artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: repo/docs
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy naar GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4

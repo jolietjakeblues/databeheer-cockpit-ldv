@@ -20,6 +20,7 @@ class StatusEntry:
     level: Level
     detail: str = ""
     url: str | None = None
+    value: float | None = None  # optioneel getal (bv. triple count) voor trendhistorie
     checked_at: datetime = field(default_factory=lambda: now_cet())
 
 

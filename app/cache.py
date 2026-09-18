@@ -3,6 +3,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable
 
+from app import history
 from app.status import StatusEntry
 
 
@@ -34,6 +35,7 @@ class DashboardCache:
         try:
             section.entries = section.fetch()
             section.last_refreshed = time.time()
+            history.record_snapshot(key, section.entries)
         finally:
             with self._locks[key]:
                 self._refreshing.discard(key)

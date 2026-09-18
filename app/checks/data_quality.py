@@ -79,7 +79,7 @@ def check_triplydb_dataset(account: str, dataset: str, label: str) -> StatusEntr
         if has_issues:
             detail += " - TriplyDB meldt datakwaliteitsissues"
 
-        return StatusEntry(label=label, level=level, detail=detail, url=page_url)
+        return StatusEntry(label=label, level=level, detail=detail, url=page_url, value=float(statements))
     except Exception as exc:
         return StatusEntry(label=label, level=Level.FAIL, detail=f"fout bij ophalen: {exc}", url=page_url)
 

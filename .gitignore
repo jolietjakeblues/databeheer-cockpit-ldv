@@ -6,3 +6,6 @@ venv/
 
 # Editor/IDE config
 .claude/
+
+# Lokale trendhistorie (SQLite) - niet gedeeld, groeit per refresh
+data/

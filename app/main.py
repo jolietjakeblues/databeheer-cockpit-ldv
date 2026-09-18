@@ -9,12 +9,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from app import history
 from app.cache import DashboardCache
 from app.checks.data_quality import gather_data_quality_statuses
 from app.checks.pipelines import gather_pipeline_statuses
 from app.checks.services import gather_service_statuses
 from app.config import load_sources
-from app.summary import sorted_entries, summarize
+from app.summary import build_trends, sorted_entries, summarize
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -24,6 +25,8 @@ jinja_env = Environment(
     loader=FileSystemLoader(BASE_DIR / "templates"),
     autoescape=select_autoescape(),
 )
+
+history.init_db()
 
 cfg = load_sources()
 cache = DashboardCache(
@@ -41,6 +44,7 @@ def dashboard(request: Request):
     sections = cache.all_sections()
     counts = summarize(sections)
     total = sum(counts.values()) or 1
+    trends = build_trends(cfg.get("triplydb_datasets", []))
     template = jinja_env.get_template("dashboard.html")
     return HTMLResponse(
         template.render(
@@ -48,6 +52,7 @@ def dashboard(request: Request):
             sorted_entries=sorted_entries,
             counts=counts,
             total=total,
+            trends=trends,
         )
     )
 

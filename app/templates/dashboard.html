@@ -32,6 +32,40 @@
         </div>
     </section>
 
+    <section class="panel">
+        <h2>Trends (laatste 30 dagen)</h2>
+
+        <h3 class="trend-subhead">Problemen over tijd</h3>
+        {% if trends.problems %}
+        <div class="problem-bars">
+            {% for p in trends.problems %}
+            <div class="problem-bar" style="height: {{ p.height_pct }}%" title="{{ p.day }}: {{ p.count }} probleem/problemen"></div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty">Wordt opgebouwd - historie start vanaf nu, elke refresh voegt een meetpunt toe.</p>
+        {% endif %}
+
+        <h3 class="trend-subhead">Datasets</h3>
+        <div class="sparkline-grid">
+            {% for ds in trends.datasets %}
+            <div class="sparkline-card">
+                <span class="sparkline-label">{{ ds.label }}</span>
+                {% if ds.current is not none %}
+                <span class="sparkline-value">{{ "{:,}".format(ds.current | int).replace(",", ".") }}</span>
+                {% endif %}
+                {% if ds.has_trend %}
+                <svg class="sparkline-svg" viewBox="0 0 140 36" preserveAspectRatio="none">
+                    <polyline points="{{ ds.points }}" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                {% else %}
+                <span class="sparkline-building">wordt opgebouwd</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
     {% for key, section in sections.items() %}
     <section class="panel">
         <h2>{{ section.title }}</h2>

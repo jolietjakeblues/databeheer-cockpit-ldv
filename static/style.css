@@ -9,6 +9,7 @@
     --text: #0b0b0b;
     --muted: #52514e;
     --border: #e1e0d9;
+    --series-1: #2a78d6; /* sequentieel blauw, dataviz-skill referentiepalette */
 }
 
 * { box-sizing: border-box; }
@@ -158,3 +159,67 @@ main {
 .health-warning { background: var(--warning); }
 .health-fail { background: var(--fail); }
 .health-unknown { background: var(--unknown); }
+
+.trend-subhead {
+    margin: 20px 0 10px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.trend-subhead:first-of-type { margin-top: 4px; }
+
+.problem-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 60px;
+    padding-top: 4px;
+}
+
+.problem-bar {
+    flex: 1 1 auto;
+    min-height: 2px;
+    max-width: 14px;
+    border-radius: 2px 2px 0 0;
+    background: var(--fail);
+}
+
+.sparkline-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+}
+
+.sparkline-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+}
+
+.sparkline-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sparkline-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.sparkline-svg { width: 100%; height: 36px; display: block; }
+
+.sparkline-building {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-style: italic;
+}

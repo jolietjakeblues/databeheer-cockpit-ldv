@@ -9,8 +9,6 @@ from app.config import load_sources
 from app.mutes import apply_mutes
 from app.status import Level, StatusEntry, now_cet
 
-POOLPARTY_TOKEN = os.getenv("POOLPARTY_TOKEN")
-
 
 def check_ldv_service(name: str, url: str) -> StatusEntry:
     """Vraagt de statuspagina van een LDV-dataset-service op (Virtuoso/Jena)."""
@@ -51,13 +49,14 @@ def check_website(name: str, url: str) -> StatusEntry:
 
 
 def check_poolparty(name: str, url: str) -> StatusEntry:
-    if not POOLPARTY_TOKEN:
+    token = os.getenv("POOLPARTY_TOKEN")
+    if not token:
         return StatusEntry(label=name, level=Level.UNKNOWN, detail="POOLPARTY_TOKEN ontbreekt, check overgeslagen", url=url)
     try:
         response = requests.get(
             url,
             allow_redirects=True,
-            headers={"Authorization": f"Basic {POOLPARTY_TOKEN}", "Content-Type": "application/json"},
+            headers={"Authorization": f"Basic {token}", "Content-Type": "application/json"},
             timeout=30,
         )
         millis = response.elapsed / timedelta(milliseconds=1)

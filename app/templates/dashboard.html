@@ -13,22 +13,35 @@
     {% endif %}
 
     <section class="panel health-panel">
-        <div class="kpi-row">
-            <div class="kpi-tile kpi-ok">
-                <span class="kpi-value">{{ counts.ok }}</span>
-                <span class="kpi-label">OK</span>
+        <div class="health-top">
+            <div class="score-gauge" title="Gewogen gezondheidsscore: fail telt zwaarder mee dan warning, onbekend nauwelijks">
+                <svg viewBox="0 0 100 100" width="96" height="96">
+                    <circle class="gauge-track" cx="50" cy="50" r="42" />
+                    <circle class="gauge-value gauge-{{ score_band }}" cx="50" cy="50" r="42"
+                            stroke-dasharray="{{ (score / 100 * 263.9) | round(1) }} 263.9" />
+                </svg>
+                <div class="gauge-label">
+                    <span class="gauge-number">{{ score }}</span>
+                    <span class="gauge-unit">%</span>
+                </div>
             </div>
-            <div class="kpi-tile kpi-warning">
-                <span class="kpi-value">{{ counts.warning }}</span>
-                <span class="kpi-label">Warning</span>
-            </div>
-            <div class="kpi-tile kpi-fail">
-                <span class="kpi-value">{{ counts.fail }}</span>
-                <span class="kpi-label">Fail</span>
-            </div>
-            <div class="kpi-tile kpi-unknown">
-                <span class="kpi-value">{{ counts.unknown }}</span>
-                <span class="kpi-label">Onbekend</span>
+            <div class="kpi-row">
+                <div class="kpi-tile kpi-ok">
+                    <span class="kpi-value">{{ counts.ok }}</span>
+                    <span class="kpi-label">OK</span>
+                </div>
+                <div class="kpi-tile kpi-warning">
+                    <span class="kpi-value">{{ counts.warning }}</span>
+                    <span class="kpi-label">Warning</span>
+                </div>
+                <div class="kpi-tile kpi-fail">
+                    <span class="kpi-value">{{ counts.fail }}</span>
+                    <span class="kpi-label">Fail</span>
+                </div>
+                <div class="kpi-tile kpi-unknown">
+                    <span class="kpi-value">{{ counts.unknown }}</span>
+                    <span class="kpi-label">Onbekend</span>
+                </div>
             </div>
         </div>
         <div class="health-bar" role="img" aria-label="{{ counts.ok }} ok, {{ counts.warning }} warning, {{ counts.fail }} fail, {{ counts.unknown }} onbekend, van {{ total }} checks">
@@ -37,10 +50,58 @@
             {% if counts.fail %}<span class="health-seg health-fail" style="width: {{ (counts.fail / total * 100) | round(1) }}%"></span>{% endif %}
             {% if counts.unknown %}<span class="health-seg health-unknown" style="width: {{ (counts.unknown / total * 100) | round(1) }}%"></span>{% endif %}
         </div>
+        {% if calm %}
+        <p class="calm-banner">{{ calm }}</p>
+        {% endif %}
+
+        <details class="legend">
+            <summary>Wat betekenen de statussen?</summary>
+            <dl>
+                <dt><span class="chip chip-ok">✓</span> OK</dt>
+                <dd>Check uitgevoerd, alles in orde.</dd>
+                <dt><span class="chip chip-warning">!</span> Warning</dt>
+                <dd>Verdient aandacht, maar is (nog) geen storing.</dd>
+                <dt><span class="chip chip-fail">✕</span> Fail</dt>
+                <dd>Daadwerkelijk gerapporteerd probleem: workflow uitgeschakeld, run mislukt, of een dataset meldt zelf een datakwaliteitsissue.</dd>
+                <dt><span class="chip chip-unknown">?</span> Onbekend</dt>
+                <dd>Geen bevestigd probleem - de check zelf lukte niet (netwerkfout, timeout, rate limit) of is gemute. Telt niet mee als storing.</dd>
+            </dl>
+        </details>
     </section>
+
+    {% if safety_signs %}
+    <section class="panel safety-panel">
+        <h2>Dagen zonder storing</h2>
+        <div class="safety-row">
+            {% for sign in safety_signs %}
+            <div class="safety-sign">
+                <span class="safety-number">{{ sign.days }}</span>
+                <span class="safety-caption">{{ sign.label }}</span>
+                {% if not sign.had_fail %}
+                <span class="safety-note">sinds start meting</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
 
     <section class="panel">
         <h2>Trends (laatste 30 dagen)</h2>
+
+        {% if trends.offenders %}
+        <h3 class="trend-subhead">Wall of shame - vaakst falende checks</h3>
+        <ol class="offender-list">
+            {% for o in trends.offenders %}
+            <li>
+                <span class="offender-rank">{{ loop.index }}</span>
+                <span class="offender-label">{{ o.label }}</span>
+                <span class="offender-section">{{ o.section }}</span>
+                <span class="offender-count">{{ o.count }}×</span>
+            </li>
+            {% endfor %}
+        </ol>
+        {% endif %}
 
         <h3 class="trend-subhead">Problemen over tijd</h3>
         {% if trends.problems %}

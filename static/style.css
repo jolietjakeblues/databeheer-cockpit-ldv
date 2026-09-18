@@ -172,12 +172,204 @@ main {
 
 .health-panel { padding-bottom: 24px; }
 
+.health-top {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 18px;
+}
+
+.score-gauge { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
+.score-gauge svg { transform: rotate(-90deg); }
+
+.gauge-track { fill: none; stroke: var(--border); stroke-width: 10; }
+
+.gauge-value {
+    fill: none;
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.4s ease;
+}
+
+.gauge-value.ok { stroke: var(--ok); }
+.gauge-value.warning { stroke: var(--warning); }
+.gauge-value.fail { stroke: var(--fail); }
+
+.gauge-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.gauge-number {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    line-height: 1;
+}
+
+.gauge-unit { font-size: 0.65rem; color: var(--muted); }
+
+.calm-banner {
+    margin: 14px 0 0;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-style: italic;
+    color: var(--muted);
+    text-align: center;
+}
+
+.legend { margin-top: 16px; }
+
+.legend summary {
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.legend summary:hover { color: var(--text); }
+
+.legend dl {
+    margin: 12px 0 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 12px;
+    align-items: start;
+}
+
+.legend dt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.legend dd { margin: 0; color: var(--muted); font-size: 0.85rem; }
+
+.chip-ok { background: rgba(12, 163, 12, 0.13); color: var(--ok); }
+.chip-warning { background: rgba(250, 178, 25, 0.22); color: #8a5c00; }
+.chip-fail { background: rgba(208, 59, 59, 0.13); color: var(--fail); }
+.chip-unknown { background: rgba(137, 135, 129, 0.16); color: var(--unknown); }
+
+.safety-panel { padding-bottom: 20px; }
+
+.safety-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 14px;
+}
+
+.safety-sign {
+    position: relative;
+    text-align: center;
+    padding: 20px 12px 14px;
+    background: var(--ink);
+    color: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.safety-sign::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: repeating-linear-gradient(45deg, var(--warning) 0 10px, var(--ink) 10px 20px);
+}
+
+.safety-number {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 2.2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    margin-top: 6px;
+}
+
+.safety-caption {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #c7cbdb;
+    margin-top: 4px;
+}
+
+.safety-note {
+    display: block;
+    font-size: 0.65rem;
+    color: #9aa1ba;
+    font-style: italic;
+    margin-top: 2px;
+}
+
+.offender-list {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.offender-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.offender-rank {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--muted);
+    width: 1.4em;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.offender-label { flex: 1 1 auto; font-weight: 600; }
+
+.offender-section {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.offender-count {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--fail);
+}
+
 .kpi-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 12px;
     margin-bottom: 18px;
 }
+
+.health-top .kpi-row { flex: 1; margin-bottom: 0; }
 
 .kpi-tile {
     display: flex;
@@ -302,6 +494,7 @@ main {
     header { padding: 22px 18px 20px; }
     main { padding: 20px 14px 48px; }
     .panel { padding: 16px 16px; }
+    .health-top { flex-direction: column; align-items: stretch; }
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
     .status-list li {
         grid-template-columns: auto 1fr;

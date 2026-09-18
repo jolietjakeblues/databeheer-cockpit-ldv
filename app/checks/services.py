@@ -48,10 +48,10 @@ def check_website(name: str, url: str) -> StatusEntry:
         return StatusEntry(label=name, level=Level.FAIL, detail=f"fout bij ophalen: {exc}", url=url)
 
 
-def check_poolparty(name: str, url: str) -> StatusEntry:
-    token = os.getenv("POOLPARTY_TOKEN")
+def check_poolparty(name: str, url: str, token_env: str = "POOLPARTY_TOKEN") -> StatusEntry:
+    token = os.getenv(token_env)
     if not token:
-        return StatusEntry(label=name, level=Level.UNKNOWN, detail="POOLPARTY_TOKEN ontbreekt, check overgeslagen", url=url)
+        return StatusEntry(label=name, level=Level.UNKNOWN, detail=f"{token_env} ontbreekt, check overgeslagen", url=url)
     try:
         response = requests.get(
             url,
@@ -79,6 +79,6 @@ def gather_service_statuses() -> list[StatusEntry]:
         entries.append(check_website(site["name"], site["url"]))
 
     for pp in cfg.get("poolparty_checks", []):
-        entries.append(check_poolparty(pp["name"], pp["url"]))
+        entries.append(check_poolparty(pp["name"], pp["url"], pp.get("token_env", "POOLPARTY_TOKEN")))
 
     return apply_mutes(entries, cfg.get("mutes", []))

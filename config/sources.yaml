@@ -140,6 +140,7 @@ triplydb_datasets:
 poolparty_checks:
   - name: "digitaalerfgoed-test: concept ophalen"
     url: "https://digitaalerfgoed-test.poolparty.biz/PoolParty/api/thesaurus/312d0e18-773b-45eb-95ff-51a94d760967/concept?concept=https://digitaalerfgoed-test.poolparty.biz/term/id/cht/9f841236-c0d0-4583-bfab-b2e8ddcf8fec&properties=all"
+    token_env: POOLPARTY_TOKEN_TEST
   - name: "data.cultureelerfgoed.nl: concept ophalen"
     url: "https://digitaalerfgoed.poolparty.biz/PoolParty/api/thesaurus/1DF17ED4-4A38-0001-C6FF-883013B04AD0/concept?concept=https://data.cultureelerfgoed.nl/term/id/cht/1685e55b-68a3-421f-9bf8-a64b6ec269b7&properties=all"
 

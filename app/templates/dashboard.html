@@ -1,9 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
+    {% if static %}
+    <div class="refresh-bar">
+        <span class="hint">Statische snapshot, automatisch bijgewerkt door GitHub Actions. Laatst gegenereerd: {{ generated_at.strftime('%Y-%m-%d %H:%M') }} CET.</span>
+    </div>
+    {% else %}
     <form method="post" action="/refresh" class="refresh-bar">
         <button type="submit">Ververs alles</button>
         <span class="hint">Secties verversen ook automatisch elke {{ 300 }} seconden.</span>
     </form>
+    {% endif %}
 
     <section class="panel health-panel">
         <div class="kpi-row">

@@ -56,7 +56,7 @@ def check_datacatalog_nde_sync() -> StatusEntry:
         return StatusEntry(label=label, level=Level.FAIL, detail=f"fout bij valideren: {exc}")
 
 
-def check_triplydb_dataset(account: str, dataset: str, label: str) -> StatusEntry:
+def check_triplydb_dataset(account: str, dataset: str, label: str, expected_private: bool = False) -> StatusEntry:
     """Vraagt TriplyDB's eigen dataset-info API op: triple count, laatste
     update en TriplyDB's eigen hasDataQualityIssues-vlag."""
     api_url = f"https://api.linkeddata.cultureelerfgoed.nl/datasets/{account}/{dataset}"
@@ -67,6 +67,8 @@ def check_triplydb_dataset(account: str, dataset: str, label: str) -> StatusEntr
 
         if response.status_code != 200 or "statements" not in data:
             reason = data.get("message", f"HTTP {response.status_code}")
+            if expected_private and response.status_code in (401, 403, 404):
+                return StatusEntry(label=label, level=Level.UNKNOWN, detail=f"privé (verwacht), niet publiek uitleesbaar: {reason}", url=page_url)
             return StatusEntry(label=label, level=Level.FAIL, detail=f"dataset niet bereikbaar: {reason}", url=page_url)
 
         statements = data.get("statements", 0)
@@ -89,6 +91,8 @@ def gather_data_quality_statuses() -> list[StatusEntry]:
     entries = [check_datacatalog_nde_sync()]
 
     for ds in cfg.get("triplydb_datasets", []):
-        entries.append(check_triplydb_dataset(ds["account"], ds["dataset"], ds["label"]))
+        entries.append(
+            check_triplydb_dataset(ds["account"], ds["dataset"], ds["label"], ds.get("expected_private", False))
+        )
 
     return entries

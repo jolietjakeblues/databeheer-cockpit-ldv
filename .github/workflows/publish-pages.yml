@@ -1,0 +1,89 @@
+name: Publiceer cockpit-snapshot naar Pages
+
+on:
+  schedule:
+    - cron: "*/30 * * * *" # elke 30 minuten
+  workflow_dispatch:
+
+permissions:
+  contents: write # om de data-branch (trendhistorie) bij te werken
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: repo
+
+      - name: Checkout trendhistorie (data-branch, indien aanwezig)
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          path: repo-data
+        continue-on-error: true
+
+      - name: Historie terugzetten
+        run: |
+          mkdir -p repo/data
+          if [ -f repo-data/history.sqlite ]; then
+            cp repo-data/history.sqlite repo/data/history.sqlite
+            echo "Bestaande historie teruggezet."
+          else
+            echo "Geen bestaande historie gevonden, start leeg (eerste run of data-branch bestaat nog niet)."
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installeer dependencies
+        working-directory: repo
+        run: pip install -r requirements.txt
+
+      - name: Render statische snapshot
+        working-directory: repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/render_static.py
+
+      - name: Historie wegschrijven naar data-branch
+        run: |
+          rm -rf repo-data
+          mkdir -p repo-data
+          cp repo/data/history.sqlite repo-data/history.sqlite
+          cd repo-data
+          git init -q
+          git checkout -q -B data
+          git config user.name "cockpit-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git add history.sqlite
+          git commit -q -m "Update trendhistorie" || echo "Geen wijzigingen in historie."
+          git push -q -f origin data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Pages-artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: repo/docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy naar GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

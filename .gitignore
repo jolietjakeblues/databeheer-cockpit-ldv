@@ -9,3 +9,7 @@ venv/
 
 # Lokale trendhistorie (SQLite) - niet gedeeld, groeit per refresh
 data/
+
+# Statische snapshot-output (Pages) - wordt door de workflow gegenereerd en
+# als build-artifact geüpload, niet gecommit naar master
+docs/

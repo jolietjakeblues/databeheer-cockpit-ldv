@@ -115,6 +115,7 @@ triplydb_datasets:
   - account: rce
     dataset: rijkscollectie-rce
     label: "Rijkscollectie RCE"
+    expected_private: true # bewust nog niet publiek toegankelijk
   - account: rce
     dataset: tooi
     label: "TOOI"

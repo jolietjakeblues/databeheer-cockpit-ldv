@@ -6,8 +6,6 @@ import requests
 from app.config import load_sources
 from app.status import Level, StatusEntry
 
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-
 _CONCLUSION_LEVEL = {
     "success": Level.OK,
     "failure": Level.FAIL,
@@ -26,8 +24,9 @@ _DISABLED_REASON = {
 
 def _headers() -> dict:
     headers = {"Accept": "application/vnd.github+json"}
-    if GITHUB_TOKEN:
-        headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+    token = os.getenv("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     return headers
 
 
@@ -57,6 +56,15 @@ def check_workflow(repo: str, workflow: str, label: str, cadence_days: int | Non
         response = requests.get(api_url, headers=_headers(), timeout=30)
         if response.status_code == 404:
             return StatusEntry(label=label, level=Level.UNKNOWN, detail="workflow niet gevonden", url=html_url)
+        if response.status_code == 403 and "rate limit" in response.text.lower():
+            limit = response.headers.get("X-RateLimit-Limit", "?")
+            token_hint = "GITHUB_TOKEN lijkt niet actief" if limit == "60" else "GITHUB_TOKEN lijkt wel actief, maar toch opgebruikt"
+            return StatusEntry(
+                label=label,
+                level=Level.FAIL,
+                detail=f"rate limit bereikt ({limit}/uur) - {token_hint}",
+                url=html_url,
+            )
         response.raise_for_status()
         runs = response.json().get("workflow_runs", [])
         if not runs:

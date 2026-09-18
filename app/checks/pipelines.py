@@ -59,10 +59,13 @@ def check_workflow(repo: str, workflow: str, label: str, cadence_days: int | Non
         if response.status_code == 403 and "rate limit" in response.text.lower():
             limit = response.headers.get("X-RateLimit-Limit", "?")
             token_hint = "GITHUB_TOKEN lijkt niet actief" if limit == "60" else "GITHUB_TOKEN lijkt wel actief, maar toch opgebruikt"
+            # Onze check kon GitHub niet bevragen - zegt niets over of de
+            # workflow zelf goed draait. Geen FAIL: dat zou een storing in
+            # ons eigen pollen laten lijken op een kapotte pipeline.
             return StatusEntry(
                 label=label,
-                level=Level.FAIL,
-                detail=f"rate limit bereikt ({limit}/uur) - {token_hint}",
+                level=Level.UNKNOWN,
+                detail=f"kon status niet checken: rate limit bereikt ({limit}/uur) - {token_hint}",
                 url=html_url,
             )
         response.raise_for_status()
@@ -92,7 +95,9 @@ def check_workflow(repo: str, workflow: str, label: str, cadence_days: int | Non
 
         return StatusEntry(label=label, level=level, detail=detail, url=run.get("html_url", html_url))
     except Exception as exc:
-        return StatusEntry(label=label, level=Level.FAIL, detail=f"fout bij ophalen: {exc}", url=html_url)
+        # Netwerkfout/timeout/onverwacht antwoord bij het checken zelf - ook
+        # dit zegt niets over de daadwerkelijke status van de workflow.
+        return StatusEntry(label=label, level=Level.UNKNOWN, detail=f"kon status niet checken: {exc}", url=html_url)
 
 
 def gather_pipeline_statuses() -> list[StatusEntry]:

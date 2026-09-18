@@ -1,0 +1,98 @@
+:root {
+    --ok: #339900;
+    --warning: #ec942c;
+    --fail: #f03c15;
+    --unknown: #9aa0a6;
+    --bg: #f5f6f8;
+    --panel: #ffffff;
+    --text: #1f2328;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+}
+
+header h1 { margin: 0 0 4px; font-size: 1.5rem; }
+.subtitle { margin: 0; color: var(--muted); font-size: 0.9rem; }
+
+main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px 32px 64px;
+}
+
+.refresh-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.refresh-bar button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background: var(--text);
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.hint { color: var(--muted); font-size: 0.8rem; }
+
+.panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+}
+
+.panel h2 { margin-top: 0; font-size: 1.1rem; }
+
+.status-list { list-style: none; margin: 0; padding: 0; }
+
+.status-list li {
+    display: grid;
+    grid-template-columns: 14px 1fr auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+}
+
+.status-list li:last-child { border-bottom: none; }
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--unknown);
+}
+
+.status-ok .dot { background: var(--ok); }
+.status-warning .dot { background: var(--warning); }
+.status-fail .dot { background: var(--fail); }
+.status-unknown .dot { background: var(--unknown); }
+
+.label a { color: var(--text); text-decoration: none; font-weight: 500; }
+.label a:hover { text-decoration: underline; }
+
+.detail { color: var(--muted); }
+.timestamp { color: var(--muted); font-size: 0.8rem; white-space: nowrap; }
+
+.empty { color: var(--muted); font-style: italic; }

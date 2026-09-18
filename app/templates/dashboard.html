@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+    <form method="post" action="/refresh" class="refresh-bar">
+        <button type="submit">Ververs alles</button>
+        <span class="hint">Secties verversen ook automatisch elke {{ 300 }} seconden.</span>
+    </form>
+
+    {% for key, section in sections.items() %}
+    <section class="panel">
+        <h2>{{ section.title }}</h2>
+        {% if section.entries %}
+        <ul class="status-list">
+            {% for entry in section.entries %}
+            <li class="status-{{ entry.level.value }}">
+                <span class="dot"></span>
+                <span class="label">
+                    {% if entry.url %}<a href="{{ entry.url }}" target="_blank" rel="noopener">{{ entry.label }}</a>{% else %}{{ entry.label }}{% endif %}
+                </span>
+                <span class="detail">{{ entry.detail }}</span>
+                <span class="timestamp">{{ entry.checked_at.strftime('%Y-%m-%d %H:%M') }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty">Nog geen data opgehaald.</p>
+        {% endif %}
+    </section>
+    {% endfor %}
+{% endblock %}

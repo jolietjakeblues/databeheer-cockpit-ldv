@@ -1,0 +1,79 @@
+from datetime import date, timedelta
+
+import requests
+
+from app.config import load_sources
+from app.status import Level, StatusEntry
+
+
+def _sparql_count(endpoint: str, query: str) -> int:
+    response = requests.get(
+        endpoint,
+        params={"query": query},
+        headers={"Accept": "application/sparql-results+json"},
+        timeout=60,
+    )
+    response.raise_for_status()
+    result = response.json()
+    return int(result["results"]["bindings"][0]["count"]["value"])
+
+
+def check_datacatalog_nde_sync() -> StatusEntry:
+    """Vergelijkt het aantal RCE-datasets in de eigen catalogus met wat het
+    NDE Datasetregister recent heeft binnengehaald."""
+    cfg = load_sources()
+    endpoints = cfg.get("sparql_endpoints", {})
+    nde_endpoint = endpoints.get("nde_datasetregister")
+    rce_endpoint = endpoints.get("datacatalog_rce")
+    label = "Datacatalog RCE <-> NDE Datasetregister"
+
+    if not nde_endpoint or not rce_endpoint:
+        return StatusEntry(label=label, level=Level.UNKNOWN, detail="endpoints niet geconfigureerd")
+
+    try:
+        nde_count = _sparql_count(
+            nde_endpoint,
+            "PREFIX dct: <http://purl.org/dc/terms/> "
+            "PREFIX schema: <https://schema.org/> "
+            "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> "
+            "SELECT (count(distinct ?dataset) as ?count) WHERE { "
+            "?dataset dct:publisher <https://www.cultureelerfgoed.nl> . "
+            "?dataset schema:dateRead ?date . "
+            f'FILTER (?date > "{date.today() - timedelta(days=2)}T00:00:00+00:00"^^xsd:dateTime) . '
+            "}",
+        )
+        rce_count = _sparql_count(
+            rce_endpoint,
+            "PREFIX schema: <https://schema.org/> "
+            "SELECT (count(distinct ?dataset) as ?count) WHERE { "
+            "?dataset schema:publisher <https://www.cultureelerfgoed.nl> . "
+            "}",
+        )
+        level = Level.OK if nde_count == rce_count else Level.WARNING
+        detail = f"{nde_count}/{rce_count} datasets uit de RCE-catalogus recent gezien op het NDE Datasetregister"
+        return StatusEntry(label=label, level=level, detail=detail)
+    except Exception as exc:
+        return StatusEntry(label=label, level=Level.FAIL, detail=f"fout bij valideren: {exc}")
+
+
+def check_triple_count(name: str, endpoint: str) -> StatusEntry:
+    label = f"Triple count: {name}"
+    try:
+        count = _sparql_count(endpoint, "SELECT (COUNT(*) as ?count) WHERE { ?s ?p ?o }")
+        level = Level.OK if count > 0 else Level.WARNING
+        return StatusEntry(label=label, level=level, detail=f"{count:,} triples".replace(",", "."), url=endpoint)
+    except Exception as exc:
+        return StatusEntry(label=label, level=Level.FAIL, detail=f"fout bij tellen: {exc}", url=endpoint)
+
+
+def gather_data_quality_statuses() -> list[StatusEntry]:
+    cfg = load_sources()
+    endpoints = cfg.get("sparql_endpoints", {})
+    entries = [check_datacatalog_nde_sync()]
+
+    for name in ("cho", "cht"):
+        endpoint = endpoints.get(name)
+        if endpoint:
+            entries.append(check_triple_count(name, endpoint))
+
+    return entries

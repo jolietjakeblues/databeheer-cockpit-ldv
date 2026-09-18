@@ -1,0 +1,87 @@
+# Configuratie van alle bronnen die de cockpit bewaakt.
+# Uitbreiden = hier een item toevoegen, geen codewijziging nodig.
+
+ldv_services:
+  - name: datacatalog:virtuoso
+    url: https://api.linkeddata.cultureelerfgoed.nl/datasets/rce/datacatalog/services/datacatalog
+  - name: cho:virtuoso
+    url: https://api.linkeddata.cultureelerfgoed.nl/datasets/rce/cho/services/cho/
+  - name: cht-jena:jena
+    url: https://api.linkeddata.cultureelerfgoed.nl/datasets/thesauri/cht/services/cht-jena/
+  - name: cht-virtuoso:virtuoso
+    url: https://api.linkeddata.cultureelerfgoed.nl/datasets/thesauri/cht/services/cht-virtuoso/
+  - name: archeologischbasisregister-jena:jena
+    url: https://api.linkeddata.cultureelerfgoed.nl/datasets/thesauri/archeologischbasisregister/services/archeologischbasisregister-jena/
+
+websites:
+  - name: Homepage Kennisbank RCE
+    url: https://kennis.cultureelerfgoed.nl/
+  - name: Datasets op Kennisbank RCE
+    url: https://kennis.cultureelerfgoed.nl/index.php/Datasets_van_de_RCE
+  - name: Beeldbank RCE
+    url: https://beeldbank.cultureelerfgoed.nl/
+  - name: Homepage RCE
+    url: https://www.cultureelerfgoed.nl/
+
+# GitHub Actions workflows die het LDV-databeheer draaiend houden.
+pipelines:
+  - repo: cultureelerfgoed/rce-thesauri-backup
+    workflow: cht-backup-poolparty.yml
+    label: "Thesauri Backup - CHT (PoolParty)"
+  - repo: cultureelerfgoed/rce-thesauri-backup
+    workflow: abr-backup-poolparty.yml
+    label: "Thesauri Backup - ABR (PoolParty)"
+  - repo: cultureelerfgoed/rce-thesauri-backup
+    workflow: wo2-thesaurus-backup-poolparty.yml
+    label: "Thesauri Backup - WO2"
+  - repo: cultureelerfgoed/rce-thesauri-backup
+    workflow: rn-backup-poolparty.yml
+    label: "Thesauri Backup - Referentie Netwerk"
+  - repo: cultureelerfgoed/rce-thesauri-backup
+    workflow: rn2-backup-poolparty.yml
+    label: "Thesauri Backup - Referentie Netwerk 2"
+  - repo: cultureelerfgoed/rce-thesauri-backup
+    workflow: cht-kennisbank-poolparty.yml
+    label: "Thesauri Backup - CHT concepts voor Kennisbank"
+  - repo: cultureelerfgoed/rce-thesauri-backup
+    workflow: ldv-cho-count.yml
+    label: "Dagelijkse triple-telling LDV CHO"
+  - repo: cultureelerfgoed/thesauri-poolparty-ldv
+    workflow: deploy.yml
+    label: "Deploy Thesauri PoolParty naar TriplyDB"
+  - repo: cultureelerfgoed/workflow-rijksmonumenten-sdo-termennetwerk
+    workflow: schemaorg-pipeline.yml
+    label: "Rijksmonumenten SDO pipeline"
+  - repo: cultureelerfgoed/tooi
+    workflow: tooi-sync.yml
+    label: "TOOI maandelijkse sync"
+  - repo: cultureelerfgoed/datacatalog-etl
+    workflow: push_latest_datacatalog.yml
+    label: "Datacatalog dagelijkse ETL"
+  - repo: cultureelerfgoed/muurschilderingendatabase-etl
+    workflow: muurschilderingendatabase-etl.yml
+    label: "Muurschilderingendatabase wekelijkse ETL"
+  - repo: cultureelerfgoed/kunstcollecties-etl
+    workflow: stateful_harvest_kunstcollecties.yml
+    label: "Kunstcollecties ETL"
+  - repo: cultureelerfgoed/cho-diff-monitor
+    workflow: cho-diff-producer.yml
+    label: "CHO diff - dagelijkse snapshot (producer)"
+  - repo: cultureelerfgoed/cho-diff-monitor
+    workflow: cho-diff-monitor.yml
+    label: "CHO diff - dagvergelijking (monitor)"
+
+# SPARQL-endpoints voor datakwaliteitschecks (allen publiek, geen token nodig).
+sparql_endpoints:
+  cho: https://api.linkeddata.cultureelerfgoed.nl/datasets/rce/cho/services/cho/sparql
+  cht: https://api.linkeddata.cultureelerfgoed.nl/datasets/thesauri/cht/services/cht-virtuoso/sparql
+  datacatalog_rce: https://api.linkeddata.cultureelerfgoed.nl/datasets/rce/datacatalog/services/datacatalog/sparql
+  nde_datasetregister: https://datasetregister.netwerkdigitaalerfgoed.nl/sparql
+
+poolparty_checks:
+  - name: "digitaalerfgoed-test: concept ophalen"
+    url: "https://digitaalerfgoed-test.poolparty.biz/PoolParty/api/thesaurus/312d0e18-773b-45eb-95ff-51a94d760967/concept?concept=https://digitaalerfgoed-test.poolparty.biz/term/id/cht/9f841236-c0d0-4583-bfab-b2e8ddcf8fec&properties=all"
+  - name: "data.cultureelerfgoed.nl: concept ophalen"
+    url: "https://data.cultureelerfgoed.nl/PoolParty/api/thesaurus/1DF17ED4-4A38-0001-C6FF-883013B04AD0/concept?concept=https://data.cultureelerfgoed.nl/term/id/cht/1b8bd4e8-d51c-4ae2-8c16-c56751e2c470&properties=all&language=de"
+
+refresh_interval_seconds: 300

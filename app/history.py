@@ -136,6 +136,70 @@ def daily_problem_counts(days: int = 30) -> list[tuple[str, int]]:
         return []
 
 
+def days_since_last_incident(section: str | None = None) -> dict | None:
+    """Dagen sinds de laatste FAIL - het getal voor een 'X dagen zonder
+    storing'-bord. Is er nog nooit een FAIL gezien (in de bewaarde 90 dagen),
+    dan telt het vanaf het eerste record ('sinds start van de meting') i.p.v.
+    een onwaarschijnlijk hoog getal te verzinnen. Geeft None als er
+    helemaal geen historie is om iets over te zeggen."""
+    try:
+        with closing(_connect()) as conn:
+            if section:
+                last_fail = conn.execute(
+                    "SELECT MAX(checked_at) FROM snapshots WHERE level = 'fail' AND section = ?",
+                    (section,),
+                ).fetchone()[0]
+            else:
+                last_fail = conn.execute(
+                    "SELECT MAX(checked_at) FROM snapshots WHERE level = 'fail'"
+                ).fetchone()[0]
+
+            had_fail = last_fail is not None
+            if had_fail:
+                since = last_fail
+            elif section:
+                since = conn.execute(
+                    "SELECT MIN(checked_at) FROM snapshots WHERE section = ?", (section,)
+                ).fetchone()[0]
+            else:
+                since = conn.execute("SELECT MIN(checked_at) FROM snapshots").fetchone()[0]
+
+        if since is None:
+            return None
+        since_dt = datetime.fromisoformat(since)
+        if since_dt.tzinfo is None:
+            since_dt = since_dt.replace(tzinfo=timezone.utc)
+        days = max(0, (datetime.now(timezone.utc) - since_dt).days)
+        return {"days": days, "had_fail": had_fail}
+    except Exception as exc:
+        print(f"[history] days_since_last_incident({section!r}) mislukt: {exc}")
+        return None
+
+
+def worst_offenders(days: int = 30, limit: int = 5) -> list[tuple[str, str, int]]:
+    """(sectie, label, aantal niet-OK checks) top-N over de laatste `days`
+    dagen - de checks die het vaakst voor problemen zorgen ('wall of shame').
+    Zelfde falen-is-geen-optie-redenering als daily_problem_counts."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    try:
+        with closing(_connect()) as conn:
+            rows = conn.execute(
+                """
+                SELECT section, label, COUNT(*) AS problems
+                FROM snapshots
+                WHERE checked_at >= ? AND level != 'ok'
+                GROUP BY section, label
+                ORDER BY problems DESC, label
+                LIMIT ?
+                """,
+                (cutoff, limit),
+            ).fetchall()
+        return list(rows)
+    except Exception as exc:
+        print(f"[history] worst_offenders mislukt: {exc}")
+        return []
+
+
 def dataset_trend(label: str, days: int = 30) -> list[tuple[str, float]]:
     """(dag, laatste waarde die dag) voor een gegeven check-label, laatste `days` dagen.
     Zelfde falen-is-geen-optie-redenering als daily_problem_counts."""

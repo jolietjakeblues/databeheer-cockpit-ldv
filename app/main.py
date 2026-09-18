@@ -16,7 +16,7 @@ from app.checks.data_quality import gather_data_quality_statuses
 from app.checks.pipelines import gather_pipeline_statuses
 from app.checks.services import gather_service_statuses
 from app.config import load_sources
-from app.summary import build_trends, sorted_entries, summarize
+from app.summary import build_safety_signs, build_trends, calm_message, health_score, score_band, sorted_entries, summarize
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -51,7 +51,13 @@ def dashboard(request: Request):
         # Trends is een bijzaak t.o.v. de live status hierboven: nooit de
         # hele pagina laten crashen op een probleem met de trendhistorie.
         print(f"[dashboard] build_trends mislukt: {exc}")
-        trends = {"problems": [], "datasets": []}
+        trends = {"problems": [], "datasets": [], "offenders": []}
+    try:
+        safety_signs = build_safety_signs(list(sections.keys()))
+    except Exception as exc:
+        print(f"[dashboard] build_safety_signs mislukt: {exc}")
+        safety_signs = []
+    score = health_score(counts)
     template = jinja_env.get_template("dashboard.html")
     return HTMLResponse(
         template.render(
@@ -60,6 +66,10 @@ def dashboard(request: Request):
             counts=counts,
             total=total,
             trends=trends,
+            score=score,
+            score_band=score_band(score),
+            calm=calm_message(counts),
+            safety_signs=safety_signs,
         )
     )
 

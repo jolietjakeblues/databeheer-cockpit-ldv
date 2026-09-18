@@ -8,7 +8,7 @@ from pathlib import Path
 
 import requests
 
-from app.status import StatusEntry
+from app.status import Level, StatusEntry
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "history.sqlite"
 RETENTION_DAYS = 90
@@ -85,6 +85,29 @@ def record_snapshot(section: str, entries: list[StatusEntry]) -> None:
             [(section, e.label, e.level.value, e.detail, e.value, now) for e in entries],
         )
         conn.execute("DELETE FROM snapshots WHERE checked_at < ?", (cutoff,))
+
+
+def detect_new_failures(entries: list[StatusEntry]) -> list[StatusEntry]:
+    """Vergelijkt elke entry met de vorige snapshot van datzelfde label en
+    geeft de entries terug die NET FAIL zijn geworden (was iets anders, is nu
+    FAIL) - bedoeld om alleen bij een echte statusovergang te alerten, niet
+    bij elke run zolang iets al bekend kapot is (voorkomt alert-moeheid).
+    Moet aangeroepen worden na record_snapshot() van diezelfde entries."""
+    if REMOTE_URL:
+        return []  # alerting gebeurt vanuit de Action, niet vanuit een read-only host
+    newly_failed = []
+    with closing(_connect()) as conn:
+        for entry in entries:
+            if entry.level != Level.FAIL:
+                continue
+            row = conn.execute(
+                "SELECT level FROM snapshots WHERE label = ? ORDER BY checked_at DESC LIMIT 1 OFFSET 1",
+                (entry.label,),
+            ).fetchone()
+            previous_level = row[0] if row else None
+            if previous_level != Level.FAIL.value:
+                newly_failed.append(entry)
+    return newly_failed
 
 
 def daily_problem_counts(days: int = 30) -> list[tuple[str, int]]:

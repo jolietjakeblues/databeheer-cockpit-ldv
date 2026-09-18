@@ -3,6 +3,7 @@ from datetime import date, timedelta
 import requests
 
 from app.config import load_sources
+from app.mutes import apply_mutes
 from app.status import Level, StatusEntry
 
 
@@ -53,10 +54,12 @@ def check_datacatalog_nde_sync() -> StatusEntry:
         detail = f"{nde_count}/{rce_count} datasets uit de RCE-catalogus recent gezien op het NDE Datasetregister"
         return StatusEntry(label=label, level=level, detail=detail)
     except Exception as exc:
-        return StatusEntry(label=label, level=Level.FAIL, detail=f"fout bij valideren: {exc}")
+        # Netwerk-/queryfout bij het checken zelf - zegt niets over of de
+        # datacatalog en het NDE-register daadwerkelijk uit sync zijn.
+        return StatusEntry(label=label, level=Level.UNKNOWN, detail=f"kon niet valideren: {exc}")
 
 
-def check_triplydb_dataset(account: str, dataset: str, label: str, expected_private: bool = False) -> StatusEntry:
+def check_triplydb_dataset(account: str, dataset: str, label: str) -> StatusEntry:
     """Vraagt TriplyDB's eigen dataset-info API op: triple count, laatste
     update en TriplyDB's eigen hasDataQualityIssues-vlag."""
     api_url = f"https://api.linkeddata.cultureelerfgoed.nl/datasets/{account}/{dataset}"
@@ -66,9 +69,10 @@ def check_triplydb_dataset(account: str, dataset: str, label: str, expected_priv
         data = response.json()
 
         if response.status_code != 200 or "statements" not in data:
+            # De dataset zelf reageert niet zoals verwacht (404/401/403/...) -
+            # dat is een echt signaal over de dataset, geen check-mislukking
+            # van onze kant, dus dit blijft FAIL (evt. te temperen via mutes).
             reason = data.get("message", f"HTTP {response.status_code}")
-            if expected_private and response.status_code in (401, 403, 404):
-                return StatusEntry(label=label, level=Level.UNKNOWN, detail=f"privé (verwacht), niet publiek uitleesbaar: {reason}", url=page_url)
             return StatusEntry(label=label, level=Level.FAIL, detail=f"dataset niet bereikbaar: {reason}", url=page_url)
 
         statements = data.get("statements", 0)
@@ -83,7 +87,9 @@ def check_triplydb_dataset(account: str, dataset: str, label: str, expected_priv
 
         return StatusEntry(label=label, level=level, detail=detail, url=page_url, value=float(statements))
     except Exception as exc:
-        return StatusEntry(label=label, level=Level.FAIL, detail=f"fout bij ophalen: {exc}", url=page_url)
+        # Netwerk-/timeoutfout bij het checken zelf (DNS, connectie, timeout)
+        # - we weten hierdoor niets over de dataset, dus geen FAIL.
+        return StatusEntry(label=label, level=Level.UNKNOWN, detail=f"kon status niet checken: {exc}", url=page_url)
 
 
 def gather_data_quality_statuses() -> list[StatusEntry]:
@@ -91,8 +97,6 @@ def gather_data_quality_statuses() -> list[StatusEntry]:
     entries = [check_datacatalog_nde_sync()]
 
     for ds in cfg.get("triplydb_datasets", []):
-        entries.append(
-            check_triplydb_dataset(ds["account"], ds["dataset"], ds["label"], ds.get("expected_private", False))
-        )
+        entries.append(check_triplydb_dataset(ds["account"], ds["dataset"], ds["label"]))
 
-    return entries
+    return apply_mutes(entries, cfg.get("mutes", []))

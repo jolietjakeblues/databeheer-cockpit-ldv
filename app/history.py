@@ -85,6 +85,13 @@ def record_snapshot(section: str, entries: list[StatusEntry]) -> None:
             [(section, e.label, e.level.value, e.detail, e.value, now) for e in entries],
         )
         conn.execute("DELETE FROM snapshots WHERE checked_at < ?", (cutoff,))
+        # WAL-mode schrijft naar een los -wal-bestand tot een checkpoint dat
+        # terugmerget in het hoofdbestand. Iets dat het hoofdbestand los van
+        # SQLite kopieert/publiceert (zoals record_history.py, dat het
+        # bestand daarna naar de data-branch commit) ziet zonder expliciete
+        # checkpoint dus soms een leeg of onvolledig bestand - vandaar hier
+        # altijd afdwingen, ook al kost dat een fractie extra op elke write.
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
 
 
 def detect_new_failures(entries: list[StatusEntry]) -> list[StatusEntry]:

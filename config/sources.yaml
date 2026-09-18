@@ -89,12 +89,53 @@ pipelines:
     label: "CHO diff - dagvergelijking (monitor)"
     cadence_days: 1
 
-# SPARQL-endpoints voor datakwaliteitschecks (allen publiek, geen token nodig).
+# SPARQL-endpoints voor de datacatalog<->NDE cross-check (publiek, geen token nodig).
 sparql_endpoints:
-  cho: https://api.linkeddata.cultureelerfgoed.nl/datasets/rce/cho/services/cho/sparql
-  cht: https://api.linkeddata.cultureelerfgoed.nl/datasets/thesauri/cht/services/cht-virtuoso/sparql
   datacatalog_rce: https://api.linkeddata.cultureelerfgoed.nl/datasets/rce/datacatalog/services/datacatalog/sparql
   nde_datasetregister: https://datasetregister.netwerkdigitaalerfgoed.nl/sparql
+
+# TriplyDB-datasets: per dataset triple count, laatste update en TriplyDB's
+# eigen hasDataQualityIssues-vlag, via https://api.linkeddata.cultureelerfgoed.nl/datasets/{account}/{dataset}
+triplydb_datasets:
+  - account: rce
+    dataset: cho
+    label: "CHO - Cultuurhistorische Objecten"
+  - account: rce
+    dataset: cho-acceptance
+    label: "CHO (acceptance)"
+  - account: rce
+    dataset: datacatalog
+    label: "Datacatalog"
+  - account: rce
+    dataset: ceo
+    label: "CEO - Cultureel Erfgoed Ontologie"
+  - account: rce
+    dataset: Rijksmonumenten-sdo
+    label: "Rijksmonumenten SDO"
+  - account: rce
+    dataset: rijkscollectie-rce
+    label: "Rijkscollectie RCE"
+  - account: rce
+    dataset: tooi
+    label: "TOOI"
+  - account: rce
+    dataset: Muurschilderingen
+    label: "Muurschilderingen"
+  - account: thesauri
+    dataset: cht
+    label: "CHT - Cultuurhistorische Thesaurus"
+  - account: thesauri
+    dataset: Cultuurhistorische-Thesaurus-CHT
+    label: "Erfgoedthesaurus (CHT, volledig)"
+  - account: thesauri
+    dataset: archeologischbasisregister
+    label: "Archeologisch Basisregister (ABR)"
+  - account: thesauri
+    dataset: referentienetwerk
+    label: "Referentienetwerk"
+  - account: thesauri
+    dataset: thesauri
+    label: "Thesauri (overkoepelend)"
 
 poolparty_checks:
   - name: "digitaalerfgoed-test: concept ophalen"

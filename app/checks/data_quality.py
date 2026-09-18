@@ -56,24 +56,39 @@ def check_datacatalog_nde_sync() -> StatusEntry:
         return StatusEntry(label=label, level=Level.FAIL, detail=f"fout bij valideren: {exc}")
 
 
-def check_triple_count(name: str, endpoint: str) -> StatusEntry:
-    label = f"Triple count: {name}"
+def check_triplydb_dataset(account: str, dataset: str, label: str) -> StatusEntry:
+    """Vraagt TriplyDB's eigen dataset-info API op: triple count, laatste
+    update en TriplyDB's eigen hasDataQualityIssues-vlag."""
+    api_url = f"https://api.linkeddata.cultureelerfgoed.nl/datasets/{account}/{dataset}"
+    page_url = f"https://linkeddata.cultureelerfgoed.nl/{account}/{dataset}"
     try:
-        count = _sparql_count(endpoint, "SELECT (COUNT(*) as ?count) WHERE { ?s ?p ?o }")
-        level = Level.OK if count > 0 else Level.WARNING
-        return StatusEntry(label=label, level=level, detail=f"{count:,} triples".replace(",", "."), url=endpoint)
+        response = requests.get(api_url, headers={"accept": "application/json"}, timeout=30)
+        data = response.json()
+
+        if response.status_code != 200 or "statements" not in data:
+            reason = data.get("message", f"HTTP {response.status_code}")
+            return StatusEntry(label=label, level=Level.FAIL, detail=f"dataset niet bereikbaar: {reason}", url=page_url)
+
+        statements = data.get("statements", 0)
+        updated_at = (data.get("updatedAt") or "")[:16].replace("T", " ")
+        has_issues = bool(data.get("hasDataQualityIssues"))
+
+        level = Level.FAIL if has_issues else Level.OK
+        statements_nl = f"{statements:,}".replace(",", ".")
+        detail = f"{statements_nl} triples, laatst bijgewerkt {updated_at}"
+        if has_issues:
+            detail += " - TriplyDB meldt datakwaliteitsissues"
+
+        return StatusEntry(label=label, level=level, detail=detail, url=page_url)
     except Exception as exc:
-        return StatusEntry(label=label, level=Level.FAIL, detail=f"fout bij tellen: {exc}", url=endpoint)
+        return StatusEntry(label=label, level=Level.FAIL, detail=f"fout bij ophalen: {exc}", url=page_url)
 
 
 def gather_data_quality_statuses() -> list[StatusEntry]:
     cfg = load_sources()
-    endpoints = cfg.get("sparql_endpoints", {})
     entries = [check_datacatalog_nde_sync()]
 
-    for name in ("cho", "cht"):
-        endpoint = endpoints.get(name)
-        if endpoint:
-            entries.append(check_triple_count(name, endpoint))
+    for ds in cfg.get("triplydb_datasets", []):
+        entries.append(check_triplydb_dataset(ds["account"], ds["dataset"], ds["label"]))
 
     return entries

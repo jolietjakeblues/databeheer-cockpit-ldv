@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -65,4 +66,17 @@ def refresh():
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    def _env_hint(name: str) -> str:
+        value = os.getenv(name)
+        if not value:
+            return "niet gezet"
+        return f"gezet ({len(value)} tekens, begint met '{value[:8]}...')"
+
+    return {
+        "status": "ok",
+        "env": {
+            "GITHUB_TOKEN": _env_hint("GITHUB_TOKEN"),
+            "POOLPARTY_TOKEN": _env_hint("POOLPARTY_TOKEN"),
+            "HISTORY_REMOTE_URL": _env_hint("HISTORY_REMOTE_URL"),
+        },
+    }

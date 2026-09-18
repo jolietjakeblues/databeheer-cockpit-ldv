@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import requests
 
 from app.config import load_sources
+from app.mutes import apply_mutes
 from app.status import Level, StatusEntry
 
 _CONCLUSION_LEVEL = {
@@ -102,7 +103,8 @@ def check_workflow(repo: str, workflow: str, label: str, cadence_days: int | Non
 
 def gather_pipeline_statuses() -> list[StatusEntry]:
     cfg = load_sources()
-    return [
+    entries = [
         check_workflow(p["repo"], p["workflow"], p["label"], p.get("cadence_days"))
         for p in cfg.get("pipelines", [])
     ]
+    return apply_mutes(entries, cfg.get("mutes", []))

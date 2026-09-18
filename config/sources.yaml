@@ -115,7 +115,6 @@ triplydb_datasets:
   - account: rce
     dataset: rijkscollectie-rce
     label: "Rijkscollectie RCE"
-    expected_private: true # bewust nog niet publiek toegankelijk
   - account: rce
     dataset: tooi
     label: "TOOI"
@@ -143,5 +142,12 @@ poolparty_checks:
     url: "https://digitaalerfgoed-test.poolparty.biz/PoolParty/api/thesaurus/312d0e18-773b-45eb-95ff-51a94d760967/concept?concept=https://digitaalerfgoed-test.poolparty.biz/term/id/cht/9f841236-c0d0-4583-bfab-b2e8ddcf8fec&properties=all"
   - name: "data.cultureelerfgoed.nl: concept ophalen"
     url: "https://data.cultureelerfgoed.nl/PoolParty/api/thesaurus/1DF17ED4-4A38-0001-C6FF-883013B04AD0/concept?concept=https://data.cultureelerfgoed.nl/term/id/cht/1b8bd4e8-d51c-4ae2-8c16-c56751e2c470&properties=all&language=de"
+
+# Bekende, geaccepteerde problemen: een check die hier op label matcht en
+# FAIL/WARNING oplevert wordt teruggebracht naar UNKNOWN met de reden erbij.
+# `until` (optioneel, YYYY-MM-DD) laat de mute vanzelf verlopen.
+mutes:
+  - label: "Rijkscollectie RCE"
+    reason: "bewust nog niet publiek toegankelijk"
 
 refresh_interval_seconds: 300

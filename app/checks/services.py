@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 import requests
 
 from app.config import load_sources
+from app.mutes import apply_mutes
 from app.status import Level, StatusEntry, now_cet
 
 POOLPARTY_TOKEN = os.getenv("POOLPARTY_TOKEN")
@@ -81,4 +82,4 @@ def gather_service_statuses() -> list[StatusEntry]:
     for pp in cfg.get("poolparty_checks", []):
         entries.append(check_poolparty(pp["name"], pp["url"]))
 
-    return entries
+    return apply_mutes(entries, cfg.get("mutes", []))

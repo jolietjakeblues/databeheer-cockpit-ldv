@@ -19,6 +19,12 @@ Rijksdienst voor het Cultureel Erfgoed. Combineert in één overzicht:
 Bovenaan staat een KPI-rij en gezondheidsbalk (OK/warning/fail/onbekend) over
 alle checks heen, en binnen elke sectie staan problemen bovenaan.
 
+Een check die faalt *bij het checken zelf* (netwerkfout, timeout, GitHub-
+rate-limit) telt als **onbekend**, niet als FAIL — dat laatste is
+gereserveerd voor een daadwerkelijk gerapporteerd probleem (workflow
+uitgeschakeld, run mislukt, dataset meldt zelf datakwaliteitsissues). Zo
+oogt een polling-hikje aan onze kant nooit als een kapotte pipeline.
+
 Onder de gezondheidsbalk staat een **Trends**-sectie: per dataset een
 sparkline en een "problemen over tijd"-grafiek, gebaseerd op een SQLite-
 historie (`data/history.sqlite`, 90 dagen bewaartermijn).
@@ -55,6 +61,40 @@ De SQLite-historie kan op twee manieren gevuld worden:
    live app draait elke 30 minuten alle checks uitvoert en de historie
    commit naar de `data`-branch (los van `master`, geen ruis in de
    commit-geschiedenis van de code).
+
+## Bekende problemen dempen (mutes)
+
+Een eenmalig geaccepteerd probleem (bv. een dataset die bewust nog niet
+publiek is) hoeft geen code-wijziging meer - voeg een item toe aan `mutes:`
+in `config/sources.yaml`:
+
+```yaml
+mutes:
+  - label: "Naam zoals die in de cockpit staat"
+    reason: "waarom dit geen echt probleem is"
+    until: "2026-12-31"   # optioneel - zonder until: blijft actief tot je 'm weghaalt
+```
+
+Een gemute check die FAIL/WARNING zou zijn wordt UNKNOWN met de reden erbij.
+Na de `until`-datum telt de mute niet meer mee en kan het probleem gewoon
+weer rood worden als het nog steeds speelt.
+
+## Alerts bij nieuwe problemen (ntfy.sh)
+
+`.github/workflows/record-history.yml` stuurt een push-notificatie via
+[ntfy.sh](https://ntfy.sh) zodra een check overgaat naar FAIL (niet bij elke
+run zolang iets al bekend kapot is - dat voorkomt alert-moeheid). Vereist de
+GitHub Actions-secret `NTFY_TOPIC`:
+
+```bash
+gh secret set NTFY_TOPIC --repo <owner>/<repo> --body "<topic-naam>"
+```
+
+Abonneer je op diezelfde topic-naam via de ntfy-app of
+`https://ntfy.sh/<topic-naam>` in de browser. De topic-naam werkt als een
+gedeeld geheim (geen account nodig) - kies iets niet-voor-de-hand-liggends.
+Alerting gebeurt alleen vanuit de Action (die altijd draait, onafhankelijk
+van of Render wakker is); de live app zelf verstuurt niets.
 
 ## Deployen op Render
 

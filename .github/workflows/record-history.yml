@@ -51,6 +51,7 @@ jobs:
         working-directory: repo
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: python scripts/record_history.py
 
       - name: Historie wegschrijven naar data-branch

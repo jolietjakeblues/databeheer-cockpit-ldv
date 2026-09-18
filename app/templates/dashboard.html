@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+    {% set level_icons = {"ok": "✓", "warning": "!", "fail": "✕", "unknown": "?"} %}
     {% if static %}
     <div class="refresh-bar">
         <span class="hint">Statische snapshot, automatisch bijgewerkt door GitHub Actions. Laatst gegenereerd: {{ generated_at.strftime('%Y-%m-%d %H:%M') }} CET.</span>
@@ -79,7 +80,7 @@
         <ul class="status-list">
             {% for entry in sorted_entries(section) %}
             <li class="status-{{ entry.level.value }}">
-                <span class="dot"></span>
+                <span class="chip">{{ level_icons[entry.level.value] }}</span>
                 <span class="label">
                     {% if entry.url %}<a href="{{ entry.url }}" target="_blank" rel="noopener">{{ entry.label }}</a>{% else %}{{ entry.label }}{% endif %}
                 </span>

@@ -19,11 +19,9 @@ Rijksdienst voor het Cultureel Erfgoed. Combineert in één overzicht:
 Bovenaan staat een KPI-rij en gezondheidsbalk (OK/warning/fail/onbekend) over
 alle checks heen, en binnen elke sectie staan problemen bovenaan.
 
-Onder de gezondheidsbalk staat een **Trends**-sectie: een lichte SQLite-laag
-(`data/history.sqlite`, lokaal, niet gedeeld, 90 dagen bewaartermijn)
-schrijft bij elke refresh een snapshot weg, waarna er per dataset een
-sparkline en een "problemen over tijd"-grafiek getoond wordt. Bouwt vanaf nu
-op — hoe langer de cockpit draait, hoe meer historie zichtbaar wordt.
+Onder de gezondheidsbalk staat een **Trends**-sectie: per dataset een
+sparkline en een "problemen over tijd"-grafiek, gebaseerd op een SQLite-
+historie (`data/history.sqlite`, 90 dagen bewaartermijn).
 
 Bouwt voort op de aanpak van
 [service-dashboard](https://github.com/cultureelerfgoed/service-dashboard),
@@ -42,6 +40,30 @@ uvicorn app.main:app --reload
 
 Dashboard is dan bereikbaar op <http://127.0.0.1:8000>.
 
+## Trendhistorie: lokaal schrijven vs. read-only op Render
+
+De SQLite-historie kan op twee manieren gevuld worden:
+
+1. **Lokaal / eigen server met schijf**: de live app schrijft zelf bij elke
+   refresh naar `data/history.sqlite`. Standaardgedrag, geen extra config.
+2. **Host zonder persistente schijf (bv. Render free tier)**: zet
+   `HISTORY_REMOTE_URL` in `.env` (of als Render env var) op de raw URL van
+   `data/history.sqlite` op de `data`-branch van deze repo. De app leest die
+   dan read-only uit (elke 5 minuten opnieuw opgehaald) en schrijft zelf
+   niets. Het bijhouden van die branch gebeurt door
+   `.github/workflows/record-history.yml`, die onafhankelijk van waar de
+   live app draait elke 30 minuten alle checks uitvoert en de historie
+   commit naar de `data`-branch (los van `master`, geen ruis in de
+   commit-geschiedenis van de code).
+
+## Deployen op Render
+
+Dit repo bevat een `render.yaml`-blueprint. In Render: New → Blueprint →
+deze repo selecteren. Zet daarna handmatig de env vars die niet in git
+horen (`GITHUB_TOKEN`, evt. `POOLPARTY_TOKEN`) via het Render-dashboard —
+`render.yaml` markeert ze als `sync: false` zodat ze niet worden overschreven.
+`HISTORY_REMOTE_URL` staat al goed in de blueprint.
+
 ## Uitbreiden
 
 Nieuwe dienst, workflow of SPARQL-check toevoegen? Voeg een item toe aan
@@ -50,10 +72,6 @@ check betreft (dan een functie toevoegen in `app/checks/`).
 
 ## Openstaand / vervolgstappen
 
-- "Rijkscollectie RCE" (`rce/rijkscollectie-rce`) geeft momenteel "Not found
-  or unauthorized" terug, terwijl de kunstcollecties-etl workflow er wel
-  naartoe pusht — waard om uit te zoeken (mogelijk een privé-dataset die een
-  TriplyDB-token vraagt, of een naam die niet meer klopt).
 - Diepere koppeling met [cho-diff-monitor](https://github.com/cultureelerfgoed/cho-diff-monitor)
   (daadwerkelijke diff-resultaten i.p.v. alleen workflow-status) vraagt een
   TriplyDB-token en is nog niet geïmplementeerd.

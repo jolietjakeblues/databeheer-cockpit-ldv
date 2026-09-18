@@ -1,15 +1,49 @@
+import os
 import sqlite3
+import tempfile
+import time
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+import requests
 
 from app.status import StatusEntry
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "history.sqlite"
 RETENTION_DAYS = 90
 
+# Read-only modus voor hosts zonder persistente schijf (bv. Render free tier):
+# leest een kant-en-klare history.sqlite van een publieke URL (de 'data'-branch
+# op GitHub, bijgehouden door .github/workflows/record-history.yml) i.p.v. zelf
+# lokaal te schrijven. Schrijven (record_snapshot) is dan een no-op.
+REMOTE_URL = os.getenv("HISTORY_REMOTE_URL")
+_REMOTE_CACHE_PATH = Path(tempfile.gettempdir()) / "cockpit-history-remote.sqlite"
+_REMOTE_CACHE_TTL = 300
+_remote_last_fetch = 0.0
+
+
+def _ensure_remote_copy() -> Path | None:
+    global _remote_last_fetch
+    if time.time() - _remote_last_fetch < _REMOTE_CACHE_TTL and _REMOTE_CACHE_PATH.exists():
+        return _REMOTE_CACHE_PATH
+    try:
+        response = requests.get(REMOTE_URL, timeout=15)
+        response.raise_for_status()
+        _REMOTE_CACHE_PATH.write_bytes(response.content)
+        _remote_last_fetch = time.time()
+    except Exception:
+        pass  # val terug op de laatst gelukte kopie, indien aanwezig
+    return _REMOTE_CACHE_PATH if _REMOTE_CACHE_PATH.exists() else None
+
 
 def _connect() -> sqlite3.Connection:
+    if REMOTE_URL:
+        path = _ensure_remote_copy()
+        if path is None:
+            raise RuntimeError("kon HISTORY_REMOTE_URL niet ophalen en geen lokale cache beschikbaar")
+        return sqlite3.connect(f"file:{path.resolve().as_posix()}?mode=ro", uri=True, timeout=10)
+
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.execute("PRAGMA journal_mode=WAL")
@@ -17,6 +51,8 @@ def _connect() -> sqlite3.Connection:
 
 
 def init_db() -> None:
+    if REMOTE_URL:
+        return  # read-only: schema wordt elders (Action) beheerd
     with closing(_connect()) as conn, conn:
         conn.execute(
             """
@@ -38,6 +74,8 @@ def init_db() -> None:
 def record_snapshot(section: str, entries: list[StatusEntry]) -> None:
     """Slaat één rij per check op en ruimt meteen alles ouder dan de
     bewaartermijn op - geen aparte cleanup-job nodig."""
+    if REMOTE_URL:
+        return  # read-only modus: dit proces schrijft niet, alleen de Action doet dat
     now = datetime.now(timezone.utc).isoformat()
     cutoff = (datetime.now(timezone.utc) - timedelta(days=RETENTION_DAYS)).isoformat()
     with closing(_connect()) as conn, conn:

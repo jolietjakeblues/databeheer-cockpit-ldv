@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: HISTORY_REMOTE_URL
         value: https://raw.githubusercontent.com/jolietjakeblues/databeheer-cockpit-ldv/data/history.sqlite

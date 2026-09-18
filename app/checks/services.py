@@ -63,6 +63,14 @@ def check_poolparty(name: str, url: str) -> StatusEntry:
         ok = response.status_code == 200 and "uri" in str(response.content)
         level = Level.OK if ok else Level.FAIL
         detail = f"HTTP {response.status_code} in {millis:.0f}ms"
+        if not ok:
+            # PoolParty's foutmelding onderscheidt "geen/foute credentials" (Access
+            # Denied) van "helemaal geen Authorization-header meegestuurd" (Full
+            # authentication is required) - dat scheelt nogal bij het uitzoeken
+            # waarom een check faalt, dus meteen meesturen i.p.v. alleen de status.
+            body = response.text.strip().replace("\n", " ")[:150]
+            if body:
+                detail += f" - {body}"
         return StatusEntry(label=f"{name} ({urlsplit(url).netloc})", level=level, detail=detail, url=url)
     except Exception as exc:
         return StatusEntry(label=name, level=Level.FAIL, detail=f"fout bij ophalen: {exc}", url=url)

@@ -28,12 +28,13 @@ def _ensure_remote_copy() -> Path | None:
     if time.time() - _remote_last_fetch < _REMOTE_CACHE_TTL and _REMOTE_CACHE_PATH.exists():
         return _REMOTE_CACHE_PATH
     try:
-        response = requests.get(REMOTE_URL, timeout=15)
+        response = requests.get(REMOTE_URL, timeout=20)
         response.raise_for_status()
         _REMOTE_CACHE_PATH.write_bytes(response.content)
         _remote_last_fetch = time.time()
-    except Exception:
-        pass  # val terug op de laatst gelukte kopie, indien aanwezig
+    except Exception as exc:
+        print(f"[history] kon HISTORY_REMOTE_URL niet ophalen: {exc}")
+        # val terug op de laatst gelukte kopie, indien aanwezig
     return _REMOTE_CACHE_PATH if _REMOTE_CACHE_PATH.exists() else None
 
 
@@ -87,38 +88,52 @@ def record_snapshot(section: str, entries: list[StatusEntry]) -> None:
 
 
 def daily_problem_counts(days: int = 30) -> list[tuple[str, int]]:
-    """(dag, aantal niet-OK checks) voor elke dag met data, laatste `days` dagen."""
+    """(dag, aantal niet-OK checks) voor elke dag met data, laatste `days` dagen.
+
+    Trends zijn een bijzaak t.o.v. de live status hierboven: als de historie
+    (lokaal of remote) om wat voor reden dan ook niet te lezen is, geeft dit
+    gewoon een lege lijst terug i.p.v. de hele dashboardpagina mee te slepen
+    in een crash."""
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-    with closing(_connect()) as conn:
-        rows = conn.execute(
-            """
-            SELECT substr(checked_at, 1, 10) AS day, COUNT(*) AS problems
-            FROM snapshots
-            WHERE checked_at >= ? AND level != 'ok'
-            GROUP BY day
-            ORDER BY day
-            """,
-            (cutoff,),
-        ).fetchall()
-    return list(rows)
+    try:
+        with closing(_connect()) as conn:
+            rows = conn.execute(
+                """
+                SELECT substr(checked_at, 1, 10) AS day, COUNT(*) AS problems
+                FROM snapshots
+                WHERE checked_at >= ? AND level != 'ok'
+                GROUP BY day
+                ORDER BY day
+                """,
+                (cutoff,),
+            ).fetchall()
+        return list(rows)
+    except Exception as exc:
+        print(f"[history] daily_problem_counts mislukt: {exc}")
+        return []
 
 
 def dataset_trend(label: str, days: int = 30) -> list[tuple[str, float]]:
-    """(dag, laatste waarde die dag) voor een gegeven check-label, laatste `days` dagen."""
+    """(dag, laatste waarde die dag) voor een gegeven check-label, laatste `days` dagen.
+    Zelfde falen-is-geen-optie-redenering als daily_problem_counts."""
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-    with closing(_connect()) as conn:
-        rows = conn.execute(
-            """
-            SELECT substr(s1.checked_at, 1, 10) AS day, s1.value
-            FROM snapshots s1
-            WHERE s1.checked_at >= ? AND s1.label = ? AND s1.value IS NOT NULL
-              AND s1.checked_at = (
-                  SELECT MAX(s2.checked_at) FROM snapshots s2
-                  WHERE s2.label = s1.label
-                    AND substr(s2.checked_at, 1, 10) = substr(s1.checked_at, 1, 10)
-              )
-            ORDER BY day
-            """,
-            (cutoff, label),
-        ).fetchall()
-    return list(rows)
+    try:
+        with closing(_connect()) as conn:
+            rows = conn.execute(
+                """
+                SELECT substr(s1.checked_at, 1, 10) AS day, s1.value
+                FROM snapshots s1
+                WHERE s1.checked_at >= ? AND s1.label = ? AND s1.value IS NOT NULL
+                  AND s1.checked_at = (
+                      SELECT MAX(s2.checked_at) FROM snapshots s2
+                      WHERE s2.label = s1.label
+                        AND substr(s2.checked_at, 1, 10) = substr(s1.checked_at, 1, 10)
+                  )
+                ORDER BY day
+                """,
+                (cutoff, label),
+            ).fetchall()
+        return list(rows)
+    except Exception as exc:
+        print(f"[history] dataset_trend({label!r}) mislukt: {exc}")
+        return []

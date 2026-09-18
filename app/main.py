@@ -45,7 +45,13 @@ def dashboard(request: Request):
     sections = cache.all_sections()
     counts = summarize(sections)
     total = sum(counts.values()) or 1
-    trends = build_trends(cfg.get("triplydb_datasets", []))
+    try:
+        trends = build_trends(cfg.get("triplydb_datasets", []))
+    except Exception as exc:
+        # Trends is een bijzaak t.o.v. de live status hierboven: nooit de
+        # hele pagina laten crashen op een probleem met de trendhistorie.
+        print(f"[dashboard] build_trends mislukt: {exc}")
+        trends = {"problems": [], "datasets": []}
     template = jinja_env.get_template("dashboard.html")
     return HTMLResponse(
         template.render(

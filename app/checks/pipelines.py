@@ -69,6 +69,30 @@ def check_workflow(repo: str, workflow: str, label: str, cadence_days: int | Non
                 detail=f"kon status niet checken: rate limit bereikt ({limit}/uur) - {token_hint}",
                 url=html_url,
             )
+        if response.status_code == 403:
+            # Geen rate limit (die is hierboven al afgevangen): GitHub kent het
+            # token wel, maar het mag dit niet lezen. Bij fine-grained tokens
+            # noemt GitHub zelf de benodigde permissie in een response-header.
+            needed = response.headers.get("X-Accepted-GitHub-Permissions")
+            hint = f" (vereist: {needed})" if needed else ""
+            return StatusEntry(
+                label=label,
+                level=Level.UNKNOWN,
+                detail=(
+                    "kon status niet checken: GITHUB_TOKEN is geldig maar heeft geen toegang (403)"
+                    f"{hint} - controleer Repository access = Public repositories en Actions = Read-only"
+                ),
+                url=html_url,
+            )
+        if response.status_code == 401:
+            # GitHub geeft 401 bij een aanwezig-maar-ongeldig token (verlopen of
+            # ingetrokken); zonder token zou het 200 met een lagere limiet zijn.
+            return StatusEntry(
+                label=label,
+                level=Level.UNKNOWN,
+                detail="kon status niet checken: GITHUB_TOKEN is ongeldig of verlopen (401) - maak een nieuw token aan",
+                url=html_url,
+            )
         response.raise_for_status()
         runs = response.json().get("workflow_runs", [])
         if not runs:

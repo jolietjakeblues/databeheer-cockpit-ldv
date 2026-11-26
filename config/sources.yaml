@@ -80,6 +80,10 @@ pipelines:
     workflow: stateful_harvest_kunstcollecties.yml
     label: "Kunstcollecties ETL"
     cadence_days: null # alleen workflow_dispatch, geen cron
+  - repo: jolietjakeblues/databeheer-cockpit-ldv
+    workflow: record-history.yml
+    label: "Cockpit - historie-Action (bewaakt zichzelf)"
+    cadence_days: 1 # cron elke 30 min; 3 dagen stilte = uitgeschakeld/vastgelopen
   - repo: cultureelerfgoed/cho-diff-monitor
     workflow: daily.yml
     label: "CHO diff - dagelijks"
@@ -96,46 +100,60 @@ sparql_endpoints:
 
 # TriplyDB-datasets: per dataset triple count, laatste update en TriplyDB's
 # eigen hasDataQualityIssues-vlag, via https://api.linkeddata.cultureelerfgoed.nl/datasets/{account}/{dataset}
+# Optioneel per dataset: max_age_days (alarm als de dataset langer dan dit niet is bijgewerkt) en
+# max_drop_pct (alarm bij een daling van minstens dit % t.o.v. de vorige meting; standaard 5,
+# null = uit; datasets onder 1000 triples worden niet getoetst).
 triplydb_datasets:
   - account: rce
     dataset: cho
     label: "CHO - Cultuurhistorische Objecten"
+    max_age_days: 3 # dagelijkse verwerking
   - account: rce
     dataset: cho-acceptance
     label: "CHO (acceptance)"
+    max_drop_pct: null # acceptatie-omgeving mag schommelen
   - account: rce
     dataset: datacatalog
     label: "Datacatalog"
+    max_age_days: 3 # dagelijkse ETL
   - account: rce
     dataset: ceo
     label: "CEO - Cultureel Erfgoed Ontologie"
   - account: rce
     dataset: Rijksmonumenten-sdo
     label: "Rijksmonumenten SDO"
+    max_age_days: 3 # dagelijkse pipeline
   - account: rce
     dataset: rijkscollectie-rce
     label: "Rijkscollectie RCE"
   - account: rce
     dataset: tooi
     label: "TOOI"
+    max_age_days: 40 # maandelijkse sync (1e van de maand)
   - account: rce
     dataset: Muurschilderingen
     label: "Muurschilderingen"
+    max_age_days: 10 # wekelijkse ETL
   - account: thesauri
     dataset: cht
     label: "CHT - Cultuurhistorische Thesaurus"
+    max_age_days: 3 # dagelijkse deploy
   - account: thesauri
     dataset: Cultuurhistorische-Thesaurus-CHT
     label: "Erfgoedthesaurus (CHT, volledig)"
+    max_age_days: 3
   - account: thesauri
     dataset: archeologischbasisregister
     label: "Archeologisch Basisregister (ABR)"
+    max_age_days: 3
   - account: thesauri
     dataset: referentienetwerk
     label: "Referentienetwerk"
+    max_age_days: 3
   - account: thesauri
     dataset: thesauri
     label: "Thesauri (overkoepelend)"
+    max_age_days: 3
 
 # PoolParty: per omgeving een set tests (zie app/checks/poolparty.py).
 # Credentials komen uit de omgeving: *_USER + *_TOKEN (aanbevolen), of alleen
@@ -169,6 +187,13 @@ poolparty:
       expected_projects:
         - { id: 312d0e18-773b-45eb-95ff-51a94d760967, label: "CHT (test)" }
         - { id: 6d635ec4-714d-4d58-b51f-a0fb84b9fcbb, label: "Referentie Netwerk 2 (test)" }
+
+# Alerts (ntfy) vanuit scripts/record_history.py, naast "nieuwe FAIL".
+alerts:
+  # Zoveel checks tegelijk onbeoordeelbaar (grijs) = de cockpit is blind (verlopen token,
+  # verkeerde credentials, netwerk) en meldt dat zelf. Niet geconfigureerde checks
+  # ("... ontbreekt, check overgeslagen") en gemute checks tellen niet mee.
+  unknown_threshold: 5
 
 # Bekende, geaccepteerde problemen: een check die hier op label matcht en
 # FAIL/WARNING oplevert wordt teruggebracht naar UNKNOWN met de reden erbij.

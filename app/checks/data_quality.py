@@ -1,7 +1,8 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import requests
 
+from app import history
 from app.config import load_sources
 from app.mutes import apply_mutes
 from app.status import Level, StatusEntry
@@ -59,7 +60,27 @@ def check_datacatalog_nde_sync() -> StatusEntry:
         return StatusEntry(label=label, level=Level.UNKNOWN, detail=f"kon niet valideren: {exc}")
 
 
-def check_triplydb_dataset(account: str, dataset: str, label: str) -> StatusEntry:
+# Een daling van de triple count van minstens dit percentage t.o.v. de laatste
+# meting van gisteren (of eerder) geldt als mogelijk dataverlies. Onder
+# MIN_TRIPLES_FOR_DROP_CHECK schommelt een dataset in percentages te veel.
+DEFAULT_MAX_DROP_PCT = 5
+MIN_TRIPLES_FOR_DROP_CHECK = 1000
+
+
+def _previous_day_value(label: str) -> float | None:
+    """Laatste opgeslagen waarde van een eerdere (UTC-)dag, of None zonder historie."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    rows = [(day, value) for day, value in history.dataset_trend(label, days=14) if day < today]
+    return rows[-1][1] if rows else None
+
+
+def check_triplydb_dataset(
+    account: str,
+    dataset: str,
+    label: str,
+    max_age_days: float | None = None,
+    max_drop_pct: float | None = DEFAULT_MAX_DROP_PCT,
+) -> StatusEntry:
     """Vraagt TriplyDB's eigen dataset-info API op: triple count, laatste
     update en TriplyDB's eigen hasDataQualityIssues-vlag."""
     api_url = f"https://api.linkeddata.cultureelerfgoed.nl/datasets/{account}/{dataset}"
@@ -76,14 +97,34 @@ def check_triplydb_dataset(account: str, dataset: str, label: str) -> StatusEntr
             return StatusEntry(label=label, level=Level.FAIL, detail=f"dataset niet bereikbaar: {reason}", url=page_url)
 
         statements = data.get("statements", 0)
-        updated_at = (data.get("updatedAt") or "")[:16].replace("T", " ")
+        updated_raw = data.get("updatedAt") or ""
+        updated_at = updated_raw[:16].replace("T", " ")
         has_issues = bool(data.get("hasDataQualityIssues"))
 
-        level = Level.FAIL if has_issues else Level.OK
         statements_nl = f"{statements:,}".replace(",", ".")
         detail = f"{statements_nl} triples, laatst bijgewerkt {updated_at}"
+        problems: list[str] = []
+
         if has_issues:
-            detail += " - TriplyDB meldt datakwaliteitsissues"
+            problems.append("TriplyDB meldt datakwaliteitsissues")
+
+        if max_age_days is not None and updated_raw:
+            age_days = (datetime.now(timezone.utc) - datetime.fromisoformat(updated_raw.replace("Z", "+00:00"))).total_seconds() / 86400
+            if age_days > max_age_days:
+                problems.append(f"al {age_days:.1f} dagen niet bijgewerkt (max {max_age_days:g}) - ververst de pipeline nog?")
+
+        if max_drop_pct is not None:
+            previous = _previous_day_value(label)
+            if previous and previous >= MIN_TRIPLES_FOR_DROP_CHECK:
+                drop_pct = 100 * (previous - statements) / previous
+                if drop_pct >= max_drop_pct:
+                    problems.append(
+                        f"{drop_pct:.1f}% minder triples dan vorige meting ({f'{int(previous):,}'.replace(',', '.')}) - dataverlies?"
+                    )
+
+        level = Level.FAIL if problems else Level.OK
+        if problems:
+            detail += " - " + "; ".join(problems)
 
         return StatusEntry(label=label, level=level, detail=detail, url=page_url, value=float(statements))
     except Exception as exc:
@@ -97,6 +138,14 @@ def gather_data_quality_statuses() -> list[StatusEntry]:
     entries = [check_datacatalog_nde_sync()]
 
     for ds in cfg.get("triplydb_datasets", []):
-        entries.append(check_triplydb_dataset(ds["account"], ds["dataset"], ds["label"]))
+        entries.append(
+            check_triplydb_dataset(
+                ds["account"],
+                ds["dataset"],
+                ds["label"],
+                max_age_days=ds.get("max_age_days"),
+                max_drop_pct=ds.get("max_drop_pct", DEFAULT_MAX_DROP_PCT),
+            )
+        )
 
     return apply_mutes(entries, cfg.get("mutes", []))

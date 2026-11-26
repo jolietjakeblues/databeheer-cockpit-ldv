@@ -137,14 +137,38 @@ triplydb_datasets:
     dataset: thesauri
     label: "Thesauri (overkoepelend)"
 
-poolparty_checks:
-  - name: "digitaalerfgoed-test: concept ophalen"
-    url: "https://digitaalerfgoed-test.poolparty.biz/PoolParty/api/thesaurus/312d0e18-773b-45eb-95ff-51a94d760967/concept?concept=https://digitaalerfgoed-test.poolparty.biz/term/id/cht/1685e55b-68a3-421f-9bf8-a64b6ec269b7&properties=all"
-    token_env: POOLPARTY_TOKEN_TEST
-    user_env: POOLPARTY_USER_TEST
-  - name: "data.cultureelerfgoed.nl: concept ophalen"
-    url: "https://digitaalerfgoed.poolparty.biz/PoolParty/api/thesaurus/1DF17ED4-4A38-0001-C6FF-883013B04AD0/concept?concept=https://data.cultureelerfgoed.nl/term/id/cht/1685e55b-68a3-421f-9bf8-a64b6ec269b7&properties=all"
-    user_env: POOLPARTY_USER
+# PoolParty: per omgeving een set tests (zie app/checks/poolparty.py).
+# Credentials komen uit de omgeving: *_USER + *_TOKEN (aanbevolen), of alleen
+# *_TOKEN met een kant-en-klare base64-waarde van "gebruiker:wachtwoord".
+poolparty:
+  slow_seconds: 10 # langzamer dan dit = waarschuwing, ook als het antwoord klopt
+  environments:
+    - name: productie
+      host: https://digitaalerfgoed.poolparty.biz
+      public_host: https://data.cultureelerfgoed.nl # waar de extractor publiek draait
+      user_env: POOLPARTY_USER
+      token_env: POOLPARTY_TOKEN
+      project_id: 1DF17ED4-4A38-0001-C6FF-883013B04AD0 # Cultuurhistorische Thesaurus
+      concept_uri: https://data.cultureelerfgoed.nl/term/id/cht/1b8bd4e8-d51c-4ae2-8c16-c56751e2c470
+      suggest_term: gotiek
+      suggest_language: nl
+      # Elk project hier krijgt een eigen testregel: bestaat, heeft schemes en topconcepten.
+      expected_projects:
+        - { id: 1DF17ED4-4A38-0001-C6FF-883013B04AD0, label: "CHT" }
+        - { id: 1bfbc515-5bee-4c49-86aa-fb03c8ee3667, label: "ABR v2" }
+        - { id: f475b9b7-177b-430f-b7eb-5ccc2420ad69, label: "Referentie Netwerk v2" }
+        - { id: 1E267A03-76FD-0001-F681-567064301637, label: "PAN" }
+    - name: test
+      host: https://digitaalerfgoed-test.poolparty.biz
+      user_env: POOLPARTY_USER_TEST
+      token_env: POOLPARTY_TOKEN_TEST
+      project_id: 312d0e18-773b-45eb-95ff-51a94d760967
+      concept_uri: https://digitaalerfgoed-test.poolparty.biz/term/id/cht/9f841236-c0d0-4583-bfab-b2e8ddcf8fec
+      suggest_term: gotiek
+      suggest_language: nl
+      expected_projects:
+        - { id: 312d0e18-773b-45eb-95ff-51a94d760967, label: "CHT (test)" }
+        - { id: 6d635ec4-714d-4d58-b51f-a0fb84b9fcbb, label: "Referentie Netwerk 2 (test)" }
 
 # Bekende, geaccepteerde problemen: een check die hier op label matcht en
 # FAIL/WARNING oplevert wordt teruggebracht naar UNKNOWN met de reden erbij.

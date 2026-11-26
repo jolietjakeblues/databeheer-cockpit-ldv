@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app import history
 from app.checks.data_quality import gather_data_quality_statuses
 from app.checks.pipelines import gather_pipeline_statuses
+from app.checks.poolparty import gather_poolparty_statuses
 from app.checks.services import gather_service_statuses
 from app.notify import send_ntfy
 
@@ -24,6 +25,7 @@ def main() -> None:
 
     sections = {
         "Diensten": gather_service_statuses,
+        "PoolParty": gather_poolparty_statuses,
         "Pipelines": gather_pipeline_statuses,
         "Datakwaliteit": gather_data_quality_statuses,
     }

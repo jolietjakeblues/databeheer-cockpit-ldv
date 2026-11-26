@@ -14,6 +14,7 @@ from app import history
 from app.cache import DashboardCache
 from app.checks.data_quality import gather_data_quality_statuses
 from app.checks.pipelines import gather_pipeline_statuses
+from app.checks.poolparty import gather_poolparty_statuses
 from app.checks.services import gather_service_statuses
 from app.config import load_sources
 from app.summary import build_safety_signs, build_trends, calm_message, health_score, score_band, sorted_entries, summarize
@@ -33,6 +34,7 @@ cfg = load_sources()
 cache = DashboardCache(
     sections={
         "Diensten": gather_service_statuses,
+        "PoolParty": gather_poolparty_statuses,
         "Pipelines": gather_pipeline_statuses,
         "Datakwaliteit": gather_data_quality_statuses,
     },
@@ -82,17 +84,23 @@ def refresh():
 
 @app.get("/health")
 def health():
+    # Dit eindpunt is openbaar: nooit tekens van een geheim tonen, behalve het
+    # vaste, publiek bekende voorvoegsel van een tokentype (geen waarde-inhoud).
+    public_prefixes = ("github_pat_", "ghp_", "gho_", "https://")
+
     def _env_hint(name: str) -> str:
         value = os.getenv(name)
         if not value:
             return "niet gezet"
-        return f"gezet ({len(value)} tekens, begint met '{value[:8]}...')"
+        prefix = next((p for p in public_prefixes if value.startswith(p)), None)
+        return f"gezet ({len(value)} tekens" + (f", begint met '{prefix}'" if prefix else "") + ")"
 
-    return {
-        "status": "ok",
-        "env": {
-            "GITHUB_TOKEN": _env_hint("GITHUB_TOKEN"),
-            "POOLPARTY_TOKEN": _env_hint("POOLPARTY_TOKEN"),
-            "HISTORY_REMOTE_URL": _env_hint("HISTORY_REMOTE_URL"),
-        },
-    }
+    names = (
+        "GITHUB_TOKEN",
+        "POOLPARTY_USER",
+        "POOLPARTY_TOKEN",
+        "POOLPARTY_USER_TEST",
+        "POOLPARTY_TOKEN_TEST",
+        "HISTORY_REMOTE_URL",
+    )
+    return {"status": "ok", "env": {name: _env_hint(name) for name in names}}

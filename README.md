@@ -102,6 +102,27 @@ gedeeld geheim (geen account nodig) - kies iets niet-voor-de-hand-liggends.
 Alerting gebeurt alleen vanuit de Action (die altijd draait, onafhankelijk
 van of Render wakker is); de live app zelf verstuurt niets.
 
+### Meer alerts en bewaking
+
+- **Blind-alarm:** zijn er `alerts.unknown_threshold` (standaard 5) of meer checks tegelijk
+  onbeoordeelbaar (grijs), bijvoorbeeld door een verlopen token of foute credentials, dan stuurt de
+  Action een melding "de cockpit is blind" met per sectie de oorzaak, en later een herstelbericht.
+  Niet-geconfigureerde checks ("... ontbreekt, check overgeslagen") en gemute checks tellen niet mee.
+- **Dataset-versheid:** per dataset in `triplydb_datasets` kan `max_age_days` gezet worden. Is de
+  dataset langer niet bijgewerkt, dan wordt de check FAIL (en dus een alert). Laat het weg voor
+  statische datasets (zoals de CEO).
+- **Grootte-alarm:** een daling van de triple count met minstens `max_drop_pct` (standaard 5%) t.o.v. de
+  laatste meting van een eerdere dag is FAIL ("dataverlies?"). `max_drop_pct: null` zet het uit.
+  Datasets onder 1000 triples worden niet getoetst. De vergelijking is met de vorige dag, dus de
+  melding verdwijnt zelf de dag erna.
+- **De bewaker bewaken:** de historie-Action staat zelf bij de pipelines, dus als die wordt
+  uitgeschakeld door GitHub (60 dagen inactiviteit) of vastloopt, zie je dat op het dashboard.
+- **PoolParty in de Action (optioneel):** zet de GitHub-secrets `POOLPARTY_USER`, `POOLPARTY_TOKEN`,
+  `POOLPARTY_USER_TEST` en `POOLPARTY_TOKEN_TEST` als ook de Action PoolParty moet bewaken en erop
+  moet alerten. Zonder die secrets draait PoolParty alleen op het dashboard.
+- **Let op, vertraging:** GitHub voert geplande workflows op deze repo in de praktijk elke 4 tot 12 uur
+  uit, ondanks de cron van 30 minuten. Alerts komen dus met die vertraging binnen.
+
 ## Deployen op Render
 
 Dit repo bevat een `render.yaml`-blueprint. In Render: New → Blueprint →

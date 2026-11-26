@@ -70,6 +70,15 @@ def init_db() -> None:
         )
         conn.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_checked_at ON snapshots (checked_at)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_label ON snapshots (label, checked_at)")
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS alert_state (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
 
 
 def record_snapshot(section: str, entries: list[StatusEntry]) -> None:
@@ -94,6 +103,25 @@ def record_snapshot(section: str, entries: list[StatusEntry]) -> None:
         # altijd afdwingen. Moet na de `with conn:` (die commit) draaien: een
         # checkpoint kan niet binnen een nog open schrijftransactie.
         conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+
+
+def get_state(key: str, default: str | None = None) -> str | None:
+    """Kleine persistente toestand voor alerting (bv. 'was de cockpit al blind?')."""
+    with closing(_connect()) as conn:
+        row = conn.execute("SELECT value FROM alert_state WHERE key = ?", (key,)).fetchone()
+    return row[0] if row else default
+
+
+def set_state(key: str, value: str) -> None:
+    if REMOTE_URL:
+        return  # read-only modus
+    now = datetime.now(timezone.utc).isoformat()
+    with closing(_connect()) as conn, conn:
+        conn.execute(
+            "INSERT INTO alert_state (key, value, updated_at) VALUES (?, ?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+            (key, value, now),
+        )
 
 
 def detect_new_failures(entries: list[StatusEntry]) -> list[StatusEntry]:
@@ -133,7 +161,7 @@ def daily_problem_counts(days: int = 30) -> list[tuple[str, int]]:
                 """
                 SELECT substr(checked_at, 1, 10) AS day, COUNT(*) AS problems
                 FROM snapshots
-                WHERE checked_at >= ? AND level != 'ok'
+                WHERE checked_at >= ? AND level IN ('fail', 'warning')
                 GROUP BY day
                 ORDER BY day
                 """,
@@ -196,7 +224,7 @@ def worst_offenders(days: int = 30, limit: int = 5) -> list[tuple[str, str, int]
                 """
                 SELECT section, label, COUNT(*) AS problems
                 FROM snapshots
-                WHERE checked_at >= ? AND level != 'ok'
+                WHERE checked_at >= ? AND level IN ('fail', 'warning')
                 GROUP BY section, label
                 ORDER BY problems DESC, label
                 LIMIT ?

@@ -52,6 +52,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          # Optioneel: zonder deze secrets worden de PoolParty-logintests overgeslagen
+          # (grijs, telt niet mee voor het blind-alarm) en alert de Action daar niet op.
+          POOLPARTY_USER: ${{ secrets.POOLPARTY_USER }}
+          POOLPARTY_TOKEN: ${{ secrets.POOLPARTY_TOKEN }}
+          POOLPARTY_USER_TEST: ${{ secrets.POOLPARTY_USER_TEST }}
+          POOLPARTY_TOKEN_TEST: ${{ secrets.POOLPARTY_TOKEN_TEST }}
         run: python scripts/record_history.py
 
       - name: Historie wegschrijven naar data-branch

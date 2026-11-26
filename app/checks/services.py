@@ -1,7 +1,5 @@
 import json
-import os
 from datetime import datetime, timedelta
-from urllib.parse import urlsplit
 
 import requests
 
@@ -48,55 +46,6 @@ def check_website(name: str, url: str) -> StatusEntry:
         return StatusEntry(label=name, level=Level.FAIL, detail=f"fout bij ophalen: {exc}", url=url)
 
 
-def poolparty_request_kwargs(token: str, user: str | None) -> dict:
-    """Met gebruikersnaam: Basic-auth uit gebruikersnaam + token (wachtwoord).
-    Zonder: `token` is een kant-en-klare base64 'user:password'-waarde."""
-    if user:
-        return {"auth": (user, token), "headers": {"Content-Type": "application/json"}}
-    return {"headers": {"Authorization": f"Basic {token}", "Content-Type": "application/json"}}
-
-
-def check_poolparty(
-    name: str, url: str, token_env: str = "POOLPARTY_TOKEN", user_env: str | None = None
-) -> StatusEntry:
-    # Eén vast label voor elke uitkomst: alert-detectie (history.detect_new_failures)
-    # en mutes matchen op label, dus een label dat tussen OK en fout verschilt
-    # laat elke wissel als "nieuwe" FAIL gelden.
-    label = f"{name} ({urlsplit(url).netloc})"
-    token = os.getenv(token_env)
-    user = os.getenv(user_env) if user_env else None
-    if not token:
-        return StatusEntry(label=label, level=Level.UNKNOWN, detail=f"{token_env} ontbreekt, check overgeslagen", url=url)
-
-    attempts = 2
-    for attempt in range(1, attempts + 1):
-        try:
-            response = requests.get(
-                url,
-                allow_redirects=True,
-                timeout=30,
-                **poolparty_request_kwargs(token, user),
-            )
-            millis = response.elapsed / timedelta(milliseconds=1)
-            ok = response.status_code == 200 and "uri" in str(response.content)
-            level = Level.OK if ok else Level.FAIL
-            detail = f"HTTP {response.status_code} in {millis:.0f}ms"
-            return StatusEntry(label=label, level=level, detail=detail, url=url)
-        except requests.exceptions.Timeout:
-            if attempt < attempts:
-                continue
-            # PoolParty is een SaaS die soms traag is: twee keer geen antwoord
-            # binnen 30s is een waarschuwing, geen storing (en dus geen ntfy-alert).
-            return StatusEntry(
-                label=label,
-                level=Level.WARNING,
-                detail=f"geen antwoord binnen 30s ({attempts} pogingen)",
-                url=url,
-            )
-        except Exception as exc:
-            return StatusEntry(label=label, level=Level.FAIL, detail=f"fout bij ophalen: {exc}", url=url)
-
-
 def gather_service_statuses() -> list[StatusEntry]:
     cfg = load_sources()
     entries: list[StatusEntry] = []
@@ -106,10 +55,5 @@ def gather_service_statuses() -> list[StatusEntry]:
 
     for site in cfg.get("websites", []):
         entries.append(check_website(site["name"], site["url"]))
-
-    for pp in cfg.get("poolparty_checks", []):
-        entries.append(check_poolparty(
-                pp["name"], pp["url"], pp.get("token_env", "POOLPARTY_TOKEN"), pp.get("user_env")
-            ))
 
     return apply_mutes(entries, cfg.get("mutes", []))

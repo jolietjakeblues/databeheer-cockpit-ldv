@@ -3,8 +3,14 @@
 Live dashboard voor het databeheer van de Linked Data Voorziening (LDV) van de
 Rijksdienst voor het Cultureel Erfgoed. Combineert in één overzicht:
 
-- **Diensten** — status van LDV-endpoints (Virtuoso/Jena), PoolParty-API's en
-  publieke websites.
+- **Diensten** — status van LDV-endpoints (Virtuoso/Jena) en publieke websites.
+- **PoolParty** — per omgeving (productie/test): API + inloggen, één testregel per
+  verwachte thesaurus (`expected_projects`: bestaat, heeft concept schemes en
+  topconcepten), concept ophalen, hiërarchie (broaders/narrowers), extractor
+  (suggest) en of een concept-URI publiek als RDF/XML resolvet. Een project
+  toevoegen is één regel in `poolparty:` in `config/sources.yaml`. Na één mislukte
+  login (401/403) wacht de check 15 minuten voor die omgeving, om een
+  accountblokkade door herhaalde foute pogingen te voorkomen.
 - **Pipelines** — status van de GitHub Actions-workflows die de LDV gevuld en
   gesynchroniseerd houden (thesauri-backups, ETL's, CHO-diffmonitor, ...).
   Kijkt niet alleen naar de laatste run-conclusie, maar ook of de workflow
